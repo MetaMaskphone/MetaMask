@@ -552,7 +552,7 @@
     "eth-url-parser": "1.0.4",
     "ethereumjs-abi": "^0.6.8",
     "ethereumjs-util": "^7.0.10",
-    "ethers": "^5.0.14",
+    "ethers": "^6.17.0",
     "ethjs-ens": "2.0.1",
     "eventemitter2": "^6.4.9",
     "events": "3.0.0",
