@@ -12125,6 +12125,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@metamask/shield-controller@npm:^7.1.1":
+  version: 7.1.1
+  resolution: "@metamask/shield-controller@npm:7.1.1"
+  dependencies:
+    "@metamask/base-controller": "npm:^10.1.0"
+    "@metamask/base-data-service": "npm:^2.1.0"
+    "@metamask/controller-utils": "npm:^13.0.0"
+    "@metamask/messenger": "npm:^3.0.0"
+    "@metamask/profile-sync-controller": "npm:^36.0.0"
+    "@metamask/signature-controller": "npm:^40.0.0"
+    "@metamask/transaction-controller": "npm:^73.0.0"
+    "@metamask/utils": "npm:^12.0.1"
+    "@tanstack/query-core": "npm:^5.103.2"
+    cockatiel: "npm:^3.2.1"
+  checksum: 10/0dd45bdd7a810a6b0cd00f6df70db29d5bc99364960d94295f7258fd160c90a17dcf58e2ee2fa8c8de8cee12b5cb05271b2592ceb21dd5d33338275e1d86f9e7
+  languageName: node
+  linkType: hard
+
 "@metamask/signature-controller@npm:^39.2.0":
   version: 39.2.10
   resolution: "@metamask/signature-controller@npm:39.2.10"
@@ -38545,7 +38563,7 @@ __metadata:
     "@metamask/seedless-onboarding-controller": "npm:12.0.0"
     "@metamask/selected-network-controller": "npm:^27.0.0"
     "@metamask/sentinel-api-service": "npm:^2.1.0"
-    "@metamask/shield-controller": "npm:^7.0.4"
+    "@metamask/shield-controller": "npm:^7.1.1"
     "@metamask/signature-controller": "npm:^39.2.0"
     "@metamask/skills": "npm:^0.3.1"
     "@metamask/slip44": "npm:^4.2.0"
