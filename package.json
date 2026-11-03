@@ -852,7 +852,7 @@
     "serve-handler": "^6.1.5",
     "sharp": "^0.34.5",
     "simple-git": "^3.25.0",
-    "storybook": "10.6.2",
+    "storybook": "10.6.5",
     "tailwindcss": "^3.4.0",
     "ts-loader": "^9.5.0",
     "ts-node": "^10.9.2",
