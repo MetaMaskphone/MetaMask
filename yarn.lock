@@ -1956,10 +1956,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.1.2, @babel/runtime@npm:^7.10.3, @babel/runtime@npm:^7.12.1, @babel/runtime@npm:^7.12.13, @babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.15.4, @babel/runtime@npm:^7.17.8, @babel/runtime@npm:^7.18.3, @babel/runtime@npm:^7.20.0, @babel/runtime@npm:^7.20.13, @babel/runtime@npm:^7.23.2, @babel/runtime@npm:^7.23.9, @babel/runtime@npm:^7.24.0, @babel/runtime@npm:^7.25.0, @babel/runtime@npm:^7.25.7, @babel/runtime@npm:^7.25.9, @babel/runtime@npm:^7.26.9, @babel/runtime@npm:^7.6.3, @babel/runtime@npm:^7.9.2":
+"@babel/runtime@npm:^7.1.2, @babel/runtime@npm:^7.10.3, @babel/runtime@npm:^7.12.1, @babel/runtime@npm:^7.12.13, @babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.15.4, @babel/runtime@npm:^7.17.8, @babel/runtime@npm:^7.18.3, @babel/runtime@npm:^7.20.0, @babel/runtime@npm:^7.20.13, @babel/runtime@npm:^7.23.2, @babel/runtime@npm:^7.24.0, @babel/runtime@npm:^7.25.0, @babel/runtime@npm:^7.25.7, @babel/runtime@npm:^7.25.9, @babel/runtime@npm:^7.26.9, @babel/runtime@npm:^7.6.3, @babel/runtime@npm:^7.9.2":
   version: 7.29.7
   resolution: "@babel/runtime@npm:7.29.7"
   checksum: 10/9883b4951787779fd382b121f22f92966d85f19434841f65fb00b2dfec232107e139683f47c6f252891826ad8ee18317b46c3a0e4819116a9885f47b46d7126a
+  languageName: node
+  linkType: hard
+
+"@babel/runtime@npm:^7.29.7":
+  version: 7.29.10
+  resolution: "@babel/runtime@npm:7.29.10"
+  checksum: 10/883bb39a09f4773cf46cdd7ba0080ef6b30ff996a4ed21f8d34511ec0836122e697716533da5efc9b5016f763110b19aa07e81cec6e2036fe72cb26aad556af2
   languageName: node
   linkType: hard
 
@@ -12185,30 +12192,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@metamask/smart-transactions-controller@npm:^27.1.0":
-  version: 27.1.0
-  resolution: "@metamask/smart-transactions-controller@npm:27.1.0"
+"@metamask/smart-transactions-controller@npm:^27.2.1":
+  version: 27.2.1
+  resolution: "@metamask/smart-transactions-controller@npm:27.2.1"
   dependencies:
-    "@babel/runtime": "npm:^7.23.9"
+    "@babel/runtime": "npm:^7.29.7"
     "@ethersproject/bytes": "npm:^5.8.0"
     "@ethersproject/keccak256": "npm:^5.8.0"
     "@ethersproject/transactions": "npm:^5.8.0"
-    "@metamask/base-controller": "npm:^10.0.0"
+    "@metamask/base-controller": "npm:^10.1.0"
     "@metamask/controller-utils": "npm:^13.0.0"
     "@metamask/eth-json-rpc-provider": "npm:^7.0.0"
     "@metamask/eth-query": "npm:^4.0.0"
     "@metamask/messenger": "npm:^3.0.0"
-    "@metamask/network-controller": "npm:^37.0.1"
+    "@metamask/network-controller": "npm:^37.1.1"
     "@metamask/polling-controller": "npm:^17.0.0"
-    "@metamask/profile-sync-controller": "npm:^34.0.0"
+    "@metamask/profile-sync-controller": "npm:^36.0.0"
     "@metamask/remote-feature-flag-controller": "npm:^7.0.0"
     "@metamask/superstruct": "npm:^3.4.1"
-    "@metamask/transaction-controller": "npm:^72.1.0"
-    "@metamask/utils": "npm:^12.0.0"
+    "@metamask/transaction-controller": "npm:^73.0.0"
+    "@metamask/utils": "npm:^12.0.1"
     bignumber.js: "npm:^9.1.2"
     lodash-es: "npm:^4.18.1"
-    reselect: "npm:^5.1.1"
-  checksum: 10/bbfff541d20cd7a74b8d84acb93dae1fcd6c66f92834963682b7bb4d7026ae1e96b3f38cf63b8c4266a9c7c4d8c6d5eba7b46b1e3e3f67357b15a88495861bac
+    reselect: "npm:^5.3.0"
+  checksum: 10/0986cab6b3bf29fd7c08bbc796950ca2ff201900491c152e0429adf93fc8e4e40aaca8f97f0c5d6f4474ffce41d961d753b2af3a0a596cd580161483b76c3876
   languageName: node
   linkType: hard
 
@@ -38549,7 +38556,7 @@ __metadata:
     "@metamask/signature-controller": "npm:^39.2.0"
     "@metamask/skills": "npm:^0.3.1"
     "@metamask/slip44": "npm:^4.2.0"
-    "@metamask/smart-transactions-controller": "npm:^27.1.0"
+    "@metamask/smart-transactions-controller": "npm:^27.2.1"
     "@metamask/snap-account-service": "npm:^4.0.0"
     "@metamask/snaps-controllers": "npm:^22.0.1"
     "@metamask/snaps-execution-environments": "npm:^11.3.3"
