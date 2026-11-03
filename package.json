@@ -778,7 +778,7 @@
     "@typescript-eslint/eslint-plugin": "^8.1.0",
     "@typescript-eslint/parser": "^8.1.0",
     "@walletconnect/types": "^2.23.0",
-    "@wdio/protocols": "^9.27.0",
+    "@wdio/protocols": "^10.0.2",
     "@welldone-software/why-did-you-render": "^8.0.1",
     "@yarnpkg/types": "^4.0.1",
     "agent-device": "^0.14.8",

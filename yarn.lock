@@ -22894,10 +22894,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@wdio/protocols@npm:9.27.0, @wdio/protocols@npm:^9.27.0":
+"@wdio/protocols@npm:9.27.0":
   version: 9.27.0
   resolution: "@wdio/protocols@npm:9.27.0"
   checksum: 10/37d5bddc72b85f0cd0b8f46f98f940910e4a24f3adf67e41cd3af7db3d0f0d679ef660fc1396b7875833f080cae362ce75f31ef4c5aa5899d6c89b7ec5389748
+  languageName: node
+  linkType: hard
+
+"@wdio/protocols@npm:^10.0.2":
+  version: 10.0.2
+  resolution: "@wdio/protocols@npm:10.0.2"
+  checksum: 10/fbb609a55fdf3a28fefaef08eb6ad5710a4cdf5e21fb70fceb13b18a1594054c6b09a69d907e35a7b8cc1b659e78aa4e577b45e78ccb004fbc68db1c7fe85a79
   languageName: node
   linkType: hard
 
@@ -38673,7 +38680,7 @@ __metadata:
     "@walletconnect/react-native-compat": "npm:^2.23.0"
     "@walletconnect/types": "npm:^2.23.0"
     "@walletconnect/utils": "npm:^2.23.0"
-    "@wdio/protocols": "npm:^9.27.0"
+    "@wdio/protocols": "npm:^10.0.2"
     "@welldone-software/why-did-you-render": "npm:^8.0.1"
     "@xmldom/xmldom": "npm:^0.8.15"
     "@yarnpkg/types": "npm:^4.0.1"
