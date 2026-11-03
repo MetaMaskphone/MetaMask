@@ -7,9 +7,9 @@ COPY server.py .
 ENV PYTHONUNBUFFERED=1 \
     DATA_DIR=/data \
     HOST=0.0.0.0 \
-    PORT=8000
+    PORT=8012
 
 VOLUME ["/data"]
-EXPOSE 8000
+EXPOSE 8012
 
 CMD ["python", "-u", "server.py"]

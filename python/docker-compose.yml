@@ -3,7 +3,16 @@ services:
     build: .
     container_name: srp-backup
     ports:
-      - "8000:8000"
+      - "8012:8012"
+    environment:
+      PORT: 8012
     volumes:
       - ./data:/data
     restart: unless-stopped
+    networks:
+      - 1panel-network
+
+networks:
+  # 1Panel 创建的网络，需要已经存在（external），compose 不会自己建
+  1panel-network:
+    external: true
