@@ -24391,16 +24391,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"assert@npm:^1.5.0":
-  version: 1.5.1
-  resolution: "assert@npm:1.5.1"
-  dependencies:
-    object.assign: "npm:^4.1.4"
-    util: "npm:^0.10.4"
-  checksum: 10/207d0eceb6c64ef458f1511c8ce441f83111c46a6ba290c1701eebf4273a8a20bdcb4d0846b5a98d9c70536f5f389e3bc9be75a98a27c8c93b5d5686e6bf3aa3
-  languageName: node
-  linkType: hard
-
 "assert@npm:^2.0.0, assert@npm:^2.1.0":
   version: 2.1.0
   resolution: "assert@npm:2.1.0"
@@ -38683,7 +38673,7 @@ __metadata:
     appium-chromium-driver: "npm:^2.0.2"
     appium-uiautomator2-driver: "npm:8.2.2"
     appium-xcuitest-driver: "npm:12.1.4"
-    assert: "npm:^1.5.0"
+    assert: "npm:^2.1.0"
     asyncstorage-down: "npm:4.2.0"
     axios: "npm:^1.20.0"
     babel-jest: "npm:^29.7.0"
@@ -51083,7 +51073,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"util@npm:^0.10.3, util@npm:^0.10.4":
+"util@npm:^0.10.3":
   version: 0.10.4
   resolution: "util@npm:0.10.4"
   dependencies:
