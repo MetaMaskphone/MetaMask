@@ -546,7 +546,7 @@
     "cron-parser": "^4.9.0",
     "cross-spawn": "7.0.6",
     "d3-shape": "^3.2.0",
-    "dayjs": "^1.11.13",
+    "dayjs": "^1.11.23",
     "eciesjs": "0.4.17",
     "eth-ens-namehash": "2.0.8",
     "eth-url-parser": "1.0.4",
