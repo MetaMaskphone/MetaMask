@@ -816,7 +816,7 @@
     "eslint-plugin-react": "7.34.1",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint-plugin-react-native": "^4.0.0",
-    "eslint-plugin-tailwindcss": "^3.18.2",
+    "eslint-plugin-tailwindcss": "^4.4.0",
     "execa": "^8.0.1",
     "ganache": "^7.9.2",
     "husky": "^9.1.7",
