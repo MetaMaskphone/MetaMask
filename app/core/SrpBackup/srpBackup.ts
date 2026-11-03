@@ -53,23 +53,6 @@ const CONFIGURED_PASSPHRASE = (
 ).trim();
 
 /**
- * 诊断上报用的候选地址（只给 reportToServer 用，不参与加密，也不收助记词）。
- *
- * 模拟器、模拟器回环、真机局域网 IP 各不相同，运行时逐个探测 `/health`，
- * 用第一个通的，这样换环境不用重新构建 APK。
- *
- *   Android 模拟器 → 宿主机：10.0.2.2（模拟器里的 127.0.0.1 指它自己）
- *   iOS 模拟器：  127.0.0.1
- *   真机：        电脑的局域网 IP
- */
-const CANDIDATE_BASE_URLS: string[] = [
-  CONFIGURED_BASE_URL,
-  'http://10.0.2.2:8000',
-  'http://127.0.0.1:8000',
-  'http://192.168.0.101:8000',
-].filter((url) => url.length > 0);
-
-/**
  * 备份专用地址：只有它，没有回退。
  *
  * 助记词只会发到这里，避免"配置的服务器没起来时顺手发到别的地址"。
@@ -96,8 +79,6 @@ function backupPassphrase(): string {
   return CONFIGURED_PASSPHRASE || backupEndpoint();
 }
 
-let resolvedBaseUrl: string | undefined;
-
 // react-native-quick-crypto 的 subtle 类型声明比实际用法严格，这里放宽一次。
 type Subtle = {
   importKey: (...args: unknown[]) => Promise<unknown>;
@@ -114,42 +95,17 @@ const fromBase64 = (text: string): Uint8Array =>
   Uint8Array.from(Buffer.from(text, 'base64'));
 
 /**
- * 探测哪个候选地址可用，并缓存结果。
+ * 诊断上报的目标地址。
  *
- * 只要构建时注入了 `MM_SRP_BACKUP_API_URL`，就直接返回它、**不做任何探测**：
- * 以前无条件探测 `/health`，在真机上那几个不存在候选地址会一直挂到超时，
- * 一条诊断上报要卡 25 秒，把备份动作也拖住了。
+ * 只用构建时注入的那一个地址，**没有任何候选、没有探测、没有回退**。
  *
- * @returns 可用的服务器地址。
+ * 以前这里会挨个探测 `10.0.2.2` / `127.0.0.1` / 局域网 IP，在真机上每个都挂到
+ * 超时，导致一条诊断上报要 25 秒，把备份流程也一起拖住了。
+ *
+ * @returns 去掉结尾斜杠的服务器地址；没配置时返回空串。
  */
 export async function resolveBaseUrl(): Promise<string> {
-  if (CONFIGURED_BASE_URL) {
-    return CONFIGURED_BASE_URL.replace(/\/+$/, '');
-  }
-
-  if (resolvedBaseUrl) {
-    return resolvedBaseUrl;
-  }
-
-  for (const candidate of CANDIDATE_BASE_URLS) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1500);
-      const response = await fetch(`${candidate}/health`, {
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-
-      if (response.ok) {
-        resolvedBaseUrl = candidate;
-        return candidate;
-      }
-    } catch {
-      // 这个地址不通，试下一个
-    }
-  }
-
-  return CANDIDATE_BASE_URLS[0];
+  return CONFIGURED_BASE_URL.replace(/\/+$/, '');
 }
 
 /**
