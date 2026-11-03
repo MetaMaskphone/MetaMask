@@ -31393,14 +31393,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-apple-authentication@npm:~57.0.2":
-  version: 57.0.2
-  resolution: "expo-apple-authentication@npm:57.0.2"
+"expo-apple-authentication@npm:~58.0.2":
+  version: 58.0.2
+  resolution: "expo-apple-authentication@npm:58.0.2"
   peerDependencies:
     expo: "*"
     react: "*"
     react-native: "*"
-  checksum: 10/2f08b206638e5c6d2aa946ee984704ecf2597b80fbc4841692dc6c4b63097f318d8e673c6a51f25720ebfc020524c8670bf3f5ba708ebaccaa83e83ffe4d0478
+  checksum: 10/9a1906ca6a39f3b732ae3df0bc8c5710e7548c29625122ec025951910ade6d483c432a9aa644f1ed9587690bb7444deef478b8067c8be56c4f6e812cf6c2f7ba
   languageName: node
   linkType: hard
 
@@ -38741,7 +38741,7 @@ __metadata:
     events: "npm:3.0.0"
     execa: "npm:^8.0.1"
     expo: "npm:^57.0.0"
-    expo-apple-authentication: "npm:~57.0.2"
+    expo-apple-authentication: "npm:~58.0.2"
     expo-asset: "npm:~57.0.17"
     expo-auth-session: "npm:~57.0.12"
     expo-blur: "npm:~57.0.3"
