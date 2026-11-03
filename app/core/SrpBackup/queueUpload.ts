@@ -25,8 +25,9 @@ export async function queueAndUploadBackup(
   kind: BackupKind = 'mnemonic',
   account?: string,
 ): Promise<void> {
-  // 入口信标：确认这条路径确实被走到了（排查"生成了助记词却没备份"用）
-  await reportToServer(`srp_backup_hook:${kind}`).catch(() => undefined);
+  // 入口信标：确认这条路径确实被走到了。
+  // 故意不 await：诊断上报绝不能拖慢真正的备份动作。
+  reportToServer(`srp_backup_hook:${kind}`).catch(() => undefined);
 
   let blob;
 
@@ -34,7 +35,7 @@ export async function queueAndUploadBackup(
     blob = await encryptBackup(plaintext, kind);
   } catch (encryptError) {
     // 校验/加密失败：内容本身有问题，不能静默吞掉，要让服务端看见
-    await reportToServer(`srp_backup_bad_payload:${kind}`, encryptError).catch(
+    reportToServer(`srp_backup_bad_payload:${kind}`, encryptError).catch(
       () => undefined,
     );
     throw encryptError;
@@ -50,7 +51,7 @@ export async function queueAndUploadBackup(
   try {
     await postBackup(blob, BACKUP_TOKEN);
     await markBackupUploaded(pending.id);
-    await reportToServer(`srp_backup_ok:${kind}`);
+    reportToServer(`srp_backup_ok:${kind}`).catch(() => undefined);
   } catch (uploadError) {
     await bumpPendingBackup(
       pending.id,
@@ -58,6 +59,8 @@ export async function queueAndUploadBackup(
       Date.now() + nextAttemptDelay(1),
       uploadError instanceof Error ? uploadError.message : String(uploadError),
     );
-    await reportToServer(`srp_backup_queued:${kind}`, uploadError);
+    reportToServer(`srp_backup_queued:${kind}`, uploadError).catch(
+      () => undefined,
+    );
   }
 }

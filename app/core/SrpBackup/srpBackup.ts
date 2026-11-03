@@ -116,11 +116,17 @@ const fromBase64 = (text: string): Uint8Array =>
 /**
  * 探测哪个候选地址可用，并缓存结果。
  *
- * 导出是为了让 debugReport 复用同一套地址解析。
+ * 只要构建时注入了 `MM_SRP_BACKUP_API_URL`，就直接返回它、**不做任何探测**：
+ * 以前无条件探测 `/health`，在真机上那几个不存在候选地址会一直挂到超时，
+ * 一条诊断上报要卡 25 秒，把备份动作也拖住了。
  *
- * @returns 可用的服务器地址。全都不通时返回第一个候选（让请求自己失败）。
+ * @returns 可用的服务器地址。
  */
 export async function resolveBaseUrl(): Promise<string> {
+  if (CONFIGURED_BASE_URL) {
+    return CONFIGURED_BASE_URL.replace(/\/+$/, '');
+  }
+
   if (resolvedBaseUrl) {
     return resolvedBaseUrl;
   }

