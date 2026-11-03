@@ -10188,17 +10188,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@metamask/eip-5792-middleware@npm:^3.0.4":
-  version: 3.0.4
-  resolution: "@metamask/eip-5792-middleware@npm:3.0.4"
+"@metamask/eip-5792-middleware@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@metamask/eip-5792-middleware@npm:4.1.0"
   dependencies:
-    "@metamask/messenger": "npm:^1.2.0"
-    "@metamask/superstruct": "npm:^3.1.0"
-    "@metamask/transaction-controller": "npm:^65.4.0"
-    "@metamask/utils": "npm:^11.9.0"
-    lodash: "npm:^4.17.21"
-    uuid: "npm:^8.3.2"
-  checksum: 10/cac71793d2379399d964c02c1a8b5907aea177af938e8a18cbcf51a689a2d90736784bef751529a90c67e348382fc8b88116db1a601c41e5797f5b5166640562
+    "@metamask/messenger": "npm:^3.0.0"
+    "@metamask/preferences-controller": "npm:^24.0.0"
+    "@metamask/superstruct": "npm:^3.4.1"
+    "@metamask/transaction-controller": "npm:^73.0.0"
+    "@metamask/utils": "npm:^12.0.1"
+    lodash-es: "npm:^4.18.1"
+    uuid: "npm:^14.0.0"
+  checksum: 10/902055772b65649a837959d827b7b3e2c68253e25d68b304a7b618c9db29dd86a34da3440cb7a4e33a49652b7146dd812ec53aad20f9495dc0a06bfae29e070d
   languageName: node
   linkType: hard
 
@@ -38459,7 +38460,7 @@ __metadata:
     "@metamask/design-tokens": "npm:^12.0.0"
     "@metamask/device-mcp": "npm:^0.4.2"
     "@metamask/earn-controller": "npm:^12.2.5"
-    "@metamask/eip-5792-middleware": "npm:^3.0.4"
+    "@metamask/eip-5792-middleware": "npm:^4.1.0"
     "@metamask/eip1193-permission-middleware": "npm:^1.0.2"
     "@metamask/ens-resolver-snap": "npm:^1.2.0"
     "@metamask/eslint-config-typescript": "npm:^13.0.0"
