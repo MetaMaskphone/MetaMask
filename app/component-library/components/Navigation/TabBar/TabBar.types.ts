@@ -1,0 +1,60 @@
+// Third party dependencies.
+import {
+  BottomTabBarProps,
+  BottomTabNavigationOptions,
+} from '@react-navigation/bottom-tabs';
+import { TabNavigationState, ParamListBase } from '@react-navigation/native';
+
+// External dependencies.
+import { IconName } from '../../Icons/Icon';
+
+/**
+ * Enum for supported tab bar labels.
+ */
+export enum TabBarIconKey {
+  Wallet = 'Wallet',
+  Browser = 'Browser',
+  Actions = 'Actions',
+  Trade = 'Trade',
+  Activity = 'Activity',
+  Setting = 'Setting',
+  Rewards = 'Rewards',
+  Trending = 'Trending',
+  Money = 'Money',
+  Social = 'Social',
+}
+
+/**
+ * Mapping of icon name by tab bar label.
+ */
+export type IconByTabBarIconKey = {
+  [key in TabBarIconKey]: IconName;
+};
+
+export interface ExtendedBottomTabNavigationOptions
+  extends BottomTabNavigationOptions {
+  tabBarIconKey: TabBarIconKey;
+  callback?: () => void;
+  rootScreenName: string;
+  isSelected?: (rootScreenName: string) => boolean;
+  isHidden?: boolean;
+  showNewBadge?: boolean;
+  /**
+   * Callback fired when leaving this tab (switching to another tab).
+   * Useful for cleanup actions like ending analytics sessions.
+   */
+  onLeave?: () => void;
+}
+
+export interface ExtendedBottomTabDescriptor {
+  options: ExtendedBottomTabNavigationOptions;
+}
+
+/**
+ * TabBar component props.
+ */
+export interface TabBarProps {
+  state: TabNavigationState<ParamListBase>;
+  descriptors: Record<string, ExtendedBottomTabDescriptor>;
+  navigation: BottomTabBarProps['navigation'];
+}

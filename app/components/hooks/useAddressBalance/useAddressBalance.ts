@@ -1,0 +1,221 @@
+import { ERC1155, ERC721 } from '@metamask/controller-utils';
+import { useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { Hex } from '@metamask/utils';
+import { toEvmCaipChainId } from '@metamask/multichain-network-controller';
+import BN4 from 'bnjs4';
+
+import Engine from '../../../core/Engine';
+import { store } from '../../../store';
+import { getTicker } from '../../../util/transactions';
+import {
+  renderFromTokenMinimalUnit,
+  renderFromWei,
+} from '../../../util/number';
+import {
+  selectEvmChainId,
+  selectEvmTicker,
+  selectNetworkConfigurationByChainId,
+} from '../../../selectors/networkController';
+import {
+  selectAccounts,
+  selectAccountsByChainId,
+} from '../../../selectors/accountTrackerController';
+import {
+  selectSelectedInternalAccountFormattedAddress,
+  selectInternalAccountsById,
+} from '../../../selectors/accountsController';
+import { Asset } from './useAddressBalance.types';
+import { RootState } from '../../../reducers';
+import { safeToChecksumAddress, getTokenDetails } from '../../../util/address';
+import {
+  selectContractBalances,
+  selectContractBalancesPerChainId,
+  selectAllTokenBalances,
+} from '../../../selectors/tokenBalancesController';
+import { useAsyncResult } from '../useAsyncResult';
+import { toAssetId } from '../../UI/Bridge/hooks/useAssetMetadata/utils';
+
+export const ERC20_DEFAULT_DECIMALS = 18;
+
+const useAddressBalance = (
+  asset?: Asset,
+  address?: string,
+  dontWatchAsset?: boolean,
+  chainId?: string,
+  networkClientId?: string,
+) => {
+  const [addressBalance, setAddressBalance] = useState('0');
+  const { value: tokenDetails } = useAsyncResult(
+    async () =>
+      await getTokenDetails(
+        asset?.address as string,
+        address,
+        undefined,
+        networkClientId,
+      ),
+    [asset?.address, address, networkClientId],
+  );
+
+  let accounts = useSelector(selectAccounts);
+  let ticker = useSelector(selectEvmTicker);
+  const accountsByChainId = useSelector(selectAccountsByChainId);
+  const networkConfigurationByChainId = useSelector((state: RootState) =>
+    selectNetworkConfigurationByChainId(state, chainId as Hex),
+  );
+  const contractBalances = useSelector(selectContractBalances);
+  const contractBalancesPerChainId = useSelector(
+    selectContractBalancesPerChainId,
+  );
+  const selectedAddress = useSelector(
+    selectSelectedInternalAccountFormattedAddress,
+  );
+  const selectedEvmChainId = useSelector(selectEvmChainId);
+  const internalAccountsById = useSelector(selectInternalAccountsById);
+  const watchingAccount = useMemo(() => {
+    if (!address) {
+      return undefined;
+    }
+    const lowerCaseAddress = address.toLowerCase();
+    return Object.values(internalAccountsById).find(
+      (account) => account.address.toLowerCase() === lowerCaseAddress,
+    );
+  }, [internalAccountsById, address]);
+  if (chainId) {
+    // If chainId is provided, use the accounts and ticker for that chain
+    accounts = accountsByChainId[chainId] ?? {};
+    ticker = networkConfigurationByChainId?.nativeCurrency;
+  }
+
+  useEffect(() => {
+    if (asset && !asset.isETH && !asset.tokenId) {
+      const {
+        address: rawAddress,
+        symbol = 'ERC20',
+        decimals,
+        image,
+        name,
+      } = asset;
+      const contractAddress = safeToChecksumAddress(rawAddress);
+      const { AssetsController } = Engine.context;
+      if (!contractAddress || !decimals || !watchingAccount) {
+        return;
+      }
+
+      const watchChainId = (chainId as Hex) ?? selectedEvmChainId;
+      // selectAllTokenBalances (getTokenBalancesControllerTokenBalances) is
+      // keyed by the InternalAccount's raw (lowercase) address, not the
+      // checksummed form — do NOT checksum this key or the lookup will
+      // always miss and re-add the same custom asset on every mount.
+      const watchingAccountAddress = watchingAccount.address as Hex;
+      // Read balances directly from the store instead of subscribing via
+      // useSelector: this effect only runs once on mount (see deps below),
+      // so a reactive subscription here would rerender this hook (and every
+      // consumer, e.g. confirmation headers) on every balance update across
+      // all accounts/chains for no benefit.
+      const allTokenBalances = selectAllTokenBalances(store.getState());
+      const alreadyWatchedOnChain =
+        !!allTokenBalances[watchingAccountAddress]?.[watchChainId]?.[
+          contractAddress
+        ];
+
+      if (!alreadyWatchedOnChain && !dontWatchAsset) {
+        const caipChainId = toEvmCaipChainId(watchChainId);
+        const caipAssetType = toAssetId(contractAddress, caipChainId);
+        if (caipAssetType) {
+          AssetsController.addCustomAsset(watchingAccount.id, caipAssetType, {
+            address: contractAddress,
+            symbol,
+            decimals,
+            iconUrl: image,
+            name: name ?? symbol,
+            chainId: watchChainId,
+          });
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const setBalance = () => {
+      if (!address) return;
+      const parsedTicker = getTicker(ticker);
+      const checksumAddress = safeToChecksumAddress(address);
+      if (!checksumAddress) {
+        return;
+      }
+      const fromAccBalance = `${renderFromWei(
+        accounts[checksumAddress]?.balance,
+      )} ${parsedTicker}`;
+      setAddressBalance(fromAccBalance);
+    };
+
+    // on signature request, asset is undefined
+    if (!address) {
+      return;
+    }
+    let fromAccBalance;
+
+    if (
+      !asset ||
+      asset.isETH ||
+      asset.tokenId ||
+      asset.standard === ERC721 ||
+      asset.standard === ERC1155
+    ) {
+      setBalance();
+    } else if (asset?.decimals !== undefined) {
+      const { address: rawAddress, symbol = 'ERC20', decimals } = asset;
+      const contractAddress = safeToChecksumAddress(rawAddress);
+      const balance =
+        contractBalancesPerChainId?.[chainId as Hex]?.[
+          contractAddress as Hex
+        ] || contractBalances[contractAddress as Hex];
+      if (!contractAddress) {
+        return;
+      }
+      if (balance) {
+        fromAccBalance = `${renderFromTokenMinimalUnit(
+          balance ?? '0',
+          Number(tokenDetails?.decimals || decimals || ERC20_DEFAULT_DECIMALS),
+        )} ${tokenDetails?.symbol ?? symbol}`;
+        setAddressBalance(fromAccBalance);
+      } else {
+        (async () => {
+          try {
+            const { AssetsContractController } = Engine.context;
+            fromAccBalance = await AssetsContractController.getERC20BalanceOf(
+              contractAddress,
+              address,
+              networkClientId,
+            );
+            fromAccBalance = `${renderFromTokenMinimalUnit(
+              // This is to work around incompatibility between bn.js v4/v5 - should be removed when migration to v5 is complete
+              new BN4(fromAccBalance?.toString(10) || '0', 10),
+              decimals,
+            )} ${symbol}`;
+            setAddressBalance(fromAccBalance);
+          } catch (exp) {
+            console.error(`Error in trying to fetch token balance - ${exp}`);
+          }
+        })();
+      }
+    }
+  }, [
+    accounts,
+    address,
+    asset,
+    chainId,
+    contractBalances,
+    contractBalancesPerChainId,
+    networkClientId,
+    selectedAddress,
+    ticker,
+    tokenDetails?.decimals,
+    tokenDetails?.symbol,
+  ]);
+  return { addressBalance };
+};
+
+export default useAddressBalance;

@@ -1,0 +1,65 @@
+# PR Labeling Guidelines
+
+To maintain a consistent and efficient development workflow, we have set specific label guidelines for all pull requests (PRs). Please ensure you adhere to the following instructions:
+
+## Mandatory team label (automated)
+
+- **Internal Developers**: Every PR raised by an internal developer must include a label prefixed with `team-` (e.g., `team-mobile-ux`, `team-mobile-platform`, etc.). This indicates the respective internal team responsible for the PR.
+
+- **External Contributors**: PRs submitted by contributors who are not part of the organization will be automatically labeled with `external-contributor`.
+
+## Mandatory checklog entry or label (manual addition)
+
+The releases changelog generation is based on PR's changelog entries.
+The check can be bypassed when necessary, either by setting the changelog entry to "null" or by adding following label:
+
+- **no-changelog**: PR's changes do not need to be included in the changelog.
+
+## Automated labels (applied by CI)
+
+### E2E readiness gate
+
+- **pr-not-ready-for-e2e**: Automatically applied to every newly opened PR. While present, E2E build and test jobs are skipped. Merge is also blocked — **unless** all changes are ignorable-only. For PRs with non-ignorable changes, the PR owner must remove this label when the PR is ready for E2E validation; once removed, CI re-runs and E2E tests execute normally.
+
+For the full CI flow that these labels control, see [E2E_DECISION_TREE.md](E2E_DECISION_TREE.md).
+
+## Optional labels (manual addition)
+
+Any label can be manually added on demand depending on the PR's content. For instance, the label **QA passed** will indicate that a thorough manual testing has been performed and the PR is ready to be merged. In addition, following labels have some specific use cases.
+
+### Bypass Quality Gates
+
+Using any of these labels should be exceptional in case of CI friction and urgencies. Please use them reasonably and verify new changes and regressions manually.
+
+- **skip-sonar-cloud**: The PR will be merged without running SonarCloud checks.
+- **skip-e2e**: The PR will be merged without running E2E tests.
+- **skip-e2e-flakiness-detection**: This label will disable the default test retries for E2E test files modified in a PR targeting `main`. Useful when making large refactors or when changes don't pose flakiness risk.
+
+### Skip Smart E2E Selection
+
+- **skip-smart-e2e-selection**: Bypasses the AI-powered Smart E2E Selection so that the full E2E test suite (`ALL` tags) runs for an eligible PR for the required platforms (Android or iOS or both). This label does **not** override global skip rules: ignorable-only PRs (e.g. docs-only), `skip-e2e`, and `pr-not-ready-for-e2e` still skip E2E entirely. Adding or removing this label re-triggers CI. Not honored on fork PRs.
+
+### Force Performance Tests
+
+- **run-performance-tests**: Runs the full performance suite on a PR. Without a performance label, PR CI does not run performance tests. Adding or removing this label re-triggers CI. Not honored on fork PRs, or when the base branch is `stable`.
+- **run-performance-account-list-tests**, **run-performance-onboarding-tests**, **run-performance-login-tests**, **run-performance-swaps-tests**, **run-performance-launch-tests**, **run-performance-asset-loading-tests**, **run-performance-predict-tests**, **run-performance-perps-tests**, **run-performance-money-tests**, **run-performance-rewards-tests**: Each runs only the matching `@Performance*` area. Several labels run the union of those areas. `run-performance-tests` still runs the full suite when it is also present. Adding or removing any of these labels re-triggers CI. Not honored on fork PRs, or when the base branch is `stable`.
+
+### Force Appium iOS Smoke Tests
+
+- **run-appium-ios-tests**: Add this label to a PR to request iOS E2E tests. Does not bypass ignorable-only, `skip-e2e`, or `pr-not-ready-for-e2e` gates. Adding or removing this label re-triggers CI. Not honored on fork PRs. A file under `tests/smoke-appium/**/*.spec.ts` requests both Android and iOS Appium smoke without this label only when the pull request files API reports it as `added` with no previous filename. Edits, renames, and copies do not trigger that added-spec rule. On a PR targeting `main`, a change under `tests/smoke-appium/**` can still select both platforms through the smoke-infrastructure override.
+
+### Block merge if any is present
+
+- **needs-qa**: The PR requires a full manual QA prior to being merged and added to a release.
+- **need-ux-ds-review**: The PR requires a review from the User Experience or Design System teams.
+- **blocked**: There are unresolved dependencies or other issues blocking the progress of this PR.
+- **stale**: The PR has not had recent activity in the last 90 days. It will be closed in 7 days.
+- **DO-NOT-MERGE**: The PR should not be merged under any circumstances.
+
+## Release version label (automated)
+
+- **release-x.y.z**: This label is automatically added to a PR and its linked issues upon the PR's merge. The `x.y.z` in the label represents the version in which the changes from the PR will be included. This label is auto-generated by a [GitHub action](../workflows/add-release-label.yml), which determines the version by incrementing the minor version number from the most recent release. Manual intervention is only required in specific cases. For instance, if a merged PR is cherry-picked into a release branch, typically done to address Release Candidate (RC) bugs, the label would need to be manually updated to reflect the correct version.
+
+To maintain code quality and project integrity, it's crucial to respect these label guidelines. Please ensure you review and update labels appropriately throughout the PR lifecycle.
+
+Thank you for your cooperation!

@@ -1,0 +1,244 @@
+import React, { PureComponent } from 'react';
+import { HeaderStandard } from '@metamask/design-system-react-native';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { fontStyles } from '../../../styles/common';
+import { strings } from '../../../../locales/i18n';
+import WebsiteIcon from '../../UI/WebsiteIcon';
+import ActionSheet from '@metamask/react-native-actionsheet';
+import Logger from '../../../util/Logger';
+import { ThemeContext, mockTheme } from '../../../util/theme';
+import PropTypes from 'prop-types';
+import WC2Manager, {
+  isWC2Enabled,
+} from '../../../../app/core/WalletConnect/WalletConnectV2';
+// eslint-disable-next-line import-x/no-restricted-paths -- TODO(ADR-0020): route-isolation backlog
+import { ExperimentalSelectorsIDs } from '../Settings/ExperimentalSettings/ExperimentalView.testIds';
+const createStyles = (colors) =>
+  StyleSheet.create({
+    wrapper: {
+      backgroundColor: colors.background.default,
+      flex: 1,
+    },
+    scrollviewContent: {
+      paddingTop: 20,
+    },
+    websiteIcon: {
+      width: 44,
+      height: 44,
+    },
+    row: {
+      flexDirection: 'row',
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderBottomColor: colors.border.muted,
+      borderBottomWidth: 1,
+    },
+    info: {
+      marginLeft: 20,
+      flex: 1,
+    },
+    name: {
+      ...fontStyles.bold,
+      fontSize: 16,
+      marginBottom: 10,
+      color: colors.text.default,
+    },
+    desc: {
+      marginBottom: 10,
+      ...fontStyles.normal,
+      fontSize: 12,
+      color: colors.text.alternative,
+    },
+    url: {
+      marginBottom: 10,
+      ...fontStyles.normal,
+      fontSize: 12,
+      color: colors.text.alternative,
+    },
+    emptyWrapper: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyText: {
+      ...fontStyles.normal,
+      fontSize: 16,
+      color: colors.text.default,
+    },
+  });
+
+/**
+ * View that displays all the active WalletConnect Sessions
+ */
+export default class WalletConnectSessions extends PureComponent {
+  state = {
+    sessions: [],
+  };
+
+  actionSheet = null;
+
+  sessionToRemove = null;
+
+  componentDidMount() {
+    this.loadSessions();
+  }
+
+  loadSessions = async () => {
+    let sessions = [];
+
+    if (isWC2Enabled) {
+      sessions = (await WC2Manager.getInstance())?.getSessions() || [];
+    }
+
+    this.setState({ ready: true, sessions });
+  };
+
+  renderDesc = (meta) => {
+    const { description } = meta;
+    const colors = this.context.colors || mockTheme.colors;
+    const styles = createStyles(colors);
+
+    if (description) {
+      return <Text style={styles.desc}>{meta.description}</Text>;
+    }
+    return null;
+  };
+
+  onLongPress = (session) => {
+    this.sessionToRemove = session;
+    this.actionSheet.show();
+  };
+
+  createActionSheetRef = (ref) => {
+    this.actionSheet = ref;
+  };
+
+  onActionSheetPress = (index) => (index === 0 ? this.killSession() : null);
+
+  killSession = async () => {
+    try {
+      if (isWC2Enabled) {
+        await (
+          await WC2Manager.getInstance()
+        )?.removeSession(this.sessionToRemove);
+      }
+
+      Alert.alert(
+        strings('walletconnect_sessions.session_ended_title'),
+        strings('walletconnect_sessions.session_ended_desc'),
+      );
+      this.loadSessions();
+    } catch (e) {
+      Logger.error(e, 'WC: Failed to kill session');
+    }
+  };
+
+  renderSessions = () => {
+    const { sessions } = this.state;
+
+    return (
+      <>
+        {sessions.map((session, index) => this.renderSession(session, index))}
+      </>
+    );
+  };
+
+  renderSession = (session, index) => {
+    const colors = this.context.colors || mockTheme.colors;
+    const styles = createStyles(colors);
+    return (
+      <TouchableOpacity
+        // eslint-disable-next-line react/jsx-no-bind
+        onLongPress={() => this.onLongPress(session)}
+        key={`session_${session.id}_${index}`}
+        style={styles.row}
+      >
+        <WebsiteIcon
+          url={session.peer.metadata.url}
+          style={styles.websiteIcon}
+        />
+        <View style={styles.info}>
+          <Text style={styles.name}>{session.peer.metadata.name}</Text>
+          <Text style={styles.url}>{session.topic}</Text>
+          <Text style={styles.url}>{session.peer.metadata.url}</Text>
+          {this.renderDesc(session.peer.metadata)}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  renderEmpty = () => {
+    const colors = this.context.colors || mockTheme.colors;
+    const styles = createStyles(colors);
+
+    return (
+      <View style={styles.emptyWrapper}>
+        <Text style={styles.emptyText}>
+          {strings('walletconnect_sessions.no_active_sessions')}
+        </Text>
+      </View>
+    );
+  };
+
+  render = () => {
+    const { ready, sessions } = this.state;
+    if (!ready) return null;
+    const colors = this.context.colors || mockTheme.colors;
+    const themeAppearance = this.context.themeAppearance;
+    const styles = createStyles(colors);
+
+    return (
+      <SafeAreaView
+        edges={{ bottom: 'additive' }}
+        style={styles.wrapper}
+        testID={ExperimentalSelectorsIDs.CONTAINER}
+      >
+        <HeaderStandard
+          title={strings('experimental_settings.wallet_connect_dapps')}
+          onBack={() => this.props.navigation.goBack()}
+          backButtonProps={{
+            testID:
+              ExperimentalSelectorsIDs.WALLET_CONNECT_SESSIONS_BACK_BUTTON,
+          }}
+          testID={ExperimentalSelectorsIDs.WALLET_CONNECT_SESSIONS_HEADER}
+          includesTopInset
+        />
+        <ScrollView
+          style={styles.wrapper}
+          contentContainerStyle={styles.scrollviewContent}
+        >
+          {sessions.length > 0 ? this.renderSessions() : this.renderEmpty()}
+        </ScrollView>
+        <ActionSheet
+          ref={this.createActionSheetRef}
+          title={strings('walletconnect_sessions.end_session_title')}
+          options={[
+            strings('walletconnect_sessions.end'),
+            strings('walletconnect_sessions.cancel'),
+          ]}
+          cancelButtonIndex={1}
+          destructiveButtonIndex={0}
+          onPress={this.onActionSheetPress}
+          theme={themeAppearance}
+        />
+      </SafeAreaView>
+    );
+  };
+}
+
+WalletConnectSessions.contextType = ThemeContext;
+
+WalletConnectSessions.propTypes = {
+  /**
+   * Navigation object
+   */
+  navigation: PropTypes.object,
+};

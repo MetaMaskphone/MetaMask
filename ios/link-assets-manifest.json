@@ -1,0 +1,41 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "app/fonts/Inter-SemiBoldItalic.ttf",
+      "sha1": "a8b8866596d9f9d5dc2cafd67c19e9a48cb8389f"
+    },
+    {
+      "path": "app/fonts/Inter-SemiBold.ttf",
+      "sha1": "847f164d8bdd1af5cb52b600a33b7ec2626f0ac2"
+    },
+    {
+      "path": "app/fonts/Inter-MediumItalic.ttf",
+      "sha1": "2804632e171219474bc088d04294c1e206b3928b"
+    },
+    {
+      "path": "app/fonts/Inter-Medium.ttf",
+      "sha1": "1bb63a6f94e351acbdcf52eb000e706cdbed07c0"
+    },
+    {
+      "path": "app/fonts/Inter-RegularItalic.ttf",
+      "sha1": "92f92635cd421dc89df8ed7a67a08af8b5e02a25"
+    },
+    {
+      "path": "app/fonts/Inter-Regular.ttf",
+      "sha1": "c1a9a094a8b367b66a4b9fade67239cf7cc55ce6"
+    },
+    {
+      "path": "app/fonts/GrotzecCond/GrotzecCond-Bold.otf",
+      "sha1": "853ef191a019b9122ea685a348fdec4f10527bf6"
+    },
+    {
+      "path": "app/fonts/Metamask.ttf",
+      "sha1": "d274323055489d231d009cb3aa7ccfba3620e340"
+    },
+    {
+      "path": "app/fonts/config.json",
+      "sha1": "47efd6cacd9d899349b5b491425b288619ba712d"
+    }
+  ]
+}

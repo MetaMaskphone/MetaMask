@@ -1,0 +1,50 @@
+import {
+  NavigationContainerRef,
+  ParamListBase,
+} from '@react-navigation/native';
+import { Platform } from 'react-native';
+import SDKConnect from '../SDKConnect';
+import DevLogger from '../utils/DevLogger';
+import asyncInit from './asyncInit';
+import DeeplinkProtocolService from '../SDKDeeplinkProtocol/DeeplinkProtocolService';
+
+async function init({
+  navigation,
+  context,
+  instance,
+}: {
+  navigation: NavigationContainerRef<ParamListBase>;
+  context?: string;
+  instance: SDKConnect;
+}) {
+  if (instance.state._initializing) {
+    DevLogger.log(
+      `SDKConnect::init()[${context}] -- already initializing -- wait for completion`,
+    );
+    return await instance.state._initializing;
+  } else if (instance.state._initialized) {
+    DevLogger.log(
+      `SDKConnect::init()[${context}] -- SKIP -- already initialized`,
+      instance.state.connections,
+    );
+    return;
+  }
+
+  if (!instance.state.deeplinkingServiceStarted && Platform.OS === 'ios') {
+    DevLogger.log(`SDKConnect::init() - starting deeplinking service`);
+    const deeplinkingService = new DeeplinkProtocolService();
+    deeplinkingService.loadPersistedConnections();
+    instance.state.deeplinkingService = deeplinkingService;
+    instance.state.deeplinkingServiceStarted = true;
+  }
+
+  instance.state._initializing = asyncInit({
+    navigation,
+    instance,
+    context,
+  });
+
+  return instance.state._initializing;
+}
+
+export default init;

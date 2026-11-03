@@ -1,0 +1,401 @@
+import React, {
+  startTransition,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+} from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  type RouteProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
+import {
+  Box,
+  HeaderStandard,
+  IconName,
+} from '@metamask/design-system-react-native';
+import {
+  TabsBar,
+  type TabItem,
+} from '../../../../../component-library/components-temp/Tabs';
+import { strings } from '../../../../../../locales/i18n';
+import Routes from '../../../../../constants/navigation/Routes';
+import type { AppNavigationProp } from '../../../../../core/NavigationService/types';
+import Engine from '../../../../../core/Engine';
+import {
+  resetBridgeState,
+  selectBridgeViewMode,
+  selectDestAddress,
+  selectDestToken,
+  selectSlippage,
+  selectSourceAmount,
+  selectSourceToken,
+  setDestAmount,
+  setSelectedQuoteRequestId,
+  setBridgeViewMode,
+  setLimitOrderCostTolerance,
+  setLimitOrderExpirationMinutes,
+} from '../../../../../core/redux/slices/bridge';
+import { BridgeViewMode } from '../../types';
+import { useBridgeSession } from '../../hooks/useBridgeSession';
+import { useEnsureDestTokenSecurityData } from '../../hooks/useEnsureDestTokenSecurityData';
+import {
+  selectBridgeLimitOrderTabEnabledFlag,
+  selectBridgeRecurringBuyTabEnabledFlag,
+} from '../../../../../selectors/bridge/featureFlags';
+import { BridgeTabKey } from './BridgeView.constants';
+import { BridgeViewSelectorsIDs } from './BridgeView.testIds';
+import BridgeMarketView from './BridgeMarketView';
+import BridgeLimitOrderView from './BridgeLimitOrderView';
+import BridgeRecurringBuyView from './BridgeRecurringBuyView';
+import type { QuoteParams } from '../../providers/SwapQuotesProvider/utils';
+import { selectSourceWalletAddress } from '../../../../../selectors/bridge';
+import type { BridgeRouteParams } from '../../hooks/useSwapBridgeNavigation';
+import { useInitialSourceToken } from '../../hooks/useInitialSourceToken';
+import { useInitialDestToken } from '../../hooks/useInitialDestToken';
+import { useReconcileInputsForNonMarketSwapTab } from '../../hooks/useReconcileInputsForNonMarketSwapTab';
+import { OrdersTabKey } from '../../components/OrdersTabs';
+import { useTrackSwapPageViewed } from '../../hooks/useTrackSwapPageViewed';
+import { MetaMetricsSwapsEventSource } from '@metamask/bridge-controller';
+
+const BridgeView = () => {
+  const {
+    selectedTab,
+    renderedTab,
+    setSelectedTab,
+    setRenderedTab,
+    setLimitOrdersTab,
+    setRecurringOrdersTab,
+    setQuoteParams,
+  } = useBridgeSession();
+  const navigation = useNavigation<AppNavigationProp>();
+  const route = useRoute<RouteProp<{ params: BridgeRouteParams }, 'params'>>();
+  const dispatch = useDispatch();
+  const bridgeViewMode = useSelector(selectBridgeViewMode);
+  const sourceToken = useSelector(selectSourceToken);
+  const destToken = useSelector(selectDestToken);
+  const sourceAmount = useSelector(selectSourceAmount);
+  const slippage = useSelector(selectSlippage);
+  const walletAddress = useSelector(selectSourceWalletAddress);
+  const destAddress = useSelector(selectDestAddress);
+  useEnsureDestTokenSecurityData();
+
+  const isLimitOrderTabEnabled = useSelector(
+    selectBridgeLimitOrderTabEnabledFlag,
+  );
+  const isRecurringBuyTabEnabled = useSelector(
+    selectBridgeRecurringBuyTabEnabledFlag,
+  );
+  const initialTab = route.params?.initialTab;
+  const initialSourceToken = route.params?.sourceToken;
+  const initialSourceAmount = route.params?.sourceAmount;
+  const initialDestToken = route.params?.destToken;
+  const initialLimitOrderExpirationMinutes =
+    route.params?.initialLimitOrderExpirationMinutes;
+  const initialLimitOrderPriceTolerance =
+    route.params?.initialLimitOrderPriceTolerance;
+
+  /** The entry point location for analytics (e.g. Main View, Token View, Trending Explore) */
+  const location =
+    route.params?.location ?? MetaMetricsSwapsEventSource.MainView;
+
+  useInitialSourceToken(initialSourceToken, initialSourceAmount);
+  useInitialDestToken(initialSourceToken, initialDestToken);
+  useReconcileInputsForNonMarketSwapTab({
+    renderedTab,
+    sourceToken,
+    destToken,
+  });
+
+  useEffect(() => {
+    if (route.params?.bridgeViewMode && bridgeViewMode === undefined) {
+      dispatch(setBridgeViewMode(route.params.bridgeViewMode));
+    }
+  }, [bridgeViewMode, dispatch, route.params?.bridgeViewMode]);
+
+  useLayoutEffect(() => {
+    if (!initialTab) {
+      return;
+    }
+
+    setSelectedTab(initialTab);
+    setRenderedTab(initialTab);
+    if (initialTab === BridgeTabKey.Limit) {
+      setLimitOrdersTab?.(OrdersTabKey.OpenOrders);
+    }
+    if (initialTab === BridgeTabKey.Recurring) {
+      setRecurringOrdersTab?.(OrdersTabKey.OpenOrders);
+    }
+    navigation.setParams({ initialTab: undefined });
+  }, [
+    initialTab,
+    navigation,
+    setLimitOrdersTab,
+    setRecurringOrdersTab,
+    setRenderedTab,
+    setSelectedTab,
+  ]);
+
+  // Deep-link presets for the Limit tab override the session values exactly
+  // once per deep link. Presets the deep link omits keep whatever the user
+  // already picked this app session. Clearing the route params afterwards
+  // stops a later re-mount (e.g. tab switch) from re-applying the presets.
+  useLayoutEffect(() => {
+    if (
+      initialLimitOrderExpirationMinutes === undefined &&
+      initialLimitOrderPriceTolerance === undefined
+    ) {
+      return;
+    }
+
+    if (initialLimitOrderExpirationMinutes !== undefined) {
+      dispatch(
+        setLimitOrderExpirationMinutes(initialLimitOrderExpirationMinutes),
+      );
+    }
+    if (initialLimitOrderPriceTolerance !== undefined) {
+      dispatch(setLimitOrderCostTolerance(initialLimitOrderPriceTolerance));
+    }
+    navigation.setParams({
+      initialLimitOrderExpirationMinutes: undefined,
+      initialLimitOrderPriceTolerance: undefined,
+    });
+  }, [
+    initialLimitOrderExpirationMinutes,
+    initialLimitOrderPriceTolerance,
+    dispatch,
+    navigation,
+  ]);
+
+  const quoteParams = useMemo(
+    (): QuoteParams => ({
+      srcToken: sourceToken,
+      destToken,
+      srcAmount: sourceAmount,
+      slippage,
+      walletAddress,
+      destWalletAddress: destAddress,
+    }),
+    [
+      sourceToken,
+      destToken,
+      sourceAmount,
+      slippage,
+      walletAddress,
+      destAddress,
+    ],
+  );
+
+  // Update BridgeSessionProvider's quote params
+  useEffect(() => {
+    setQuoteParams(quoteParams);
+  }, [quoteParams, setQuoteParams]);
+
+  useTrackSwapPageViewed(location);
+
+  let headerTitle: string;
+  if (bridgeViewMode === BridgeViewMode.Bridge) {
+    headerTitle = strings('bridge.title');
+  } else {
+    headerTitle = strings('swaps.title');
+  }
+
+  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
+
+  const handleSlippageSettingsPress = useCallback(() => {
+    navigation.navigate(Routes.BRIDGE.MODALS.ROOT, {
+      screen: Routes.BRIDGE.MODALS.SWAP_DEFAULT_SLIPPAGE_MODAL,
+      params: {
+        sourceChainId: sourceToken?.chainId,
+        destChainId: destToken?.chainId,
+      },
+    });
+  }, [destToken?.chainId, navigation, sourceToken?.chainId]);
+
+  // Slippage only applies to market orders. This follows the rendered tab so
+  // the header and the content below it always describe the same tab.
+  const endButtonIconProps = useMemo(
+    () =>
+      renderedTab === BridgeTabKey.Market
+        ? [
+            {
+              iconName: IconName.Setting,
+              onPress: handleSlippageSettingsPress,
+              testID: BridgeViewSelectorsIDs.SLIPPAGE_SETTINGS_BUTTON,
+              accessibilityLabel: strings('bridge.slippage'),
+            },
+          ]
+        : undefined,
+    [renderedTab, handleSlippageSettingsPress],
+  );
+
+  // Limit and Recurring are still work-in-progress, so each is only added to
+  // the tab list once its own feature flag is enabled. When both are
+  // disabled, only Market remains and the tabs bar is hidden entirely below.
+  const tabs = useMemo<TabItem[]>(() => {
+    const visibleTabs: TabItem[] = [
+      {
+        key: BridgeTabKey.Market,
+        label: strings('bridge.tabs.market'),
+        content: null,
+        testID: BridgeViewSelectorsIDs.MARKET_TAB,
+      },
+    ];
+
+    if (isLimitOrderTabEnabled) {
+      visibleTabs.push({
+        key: BridgeTabKey.Limit,
+        label: strings('bridge.tabs.limit'),
+        content: null,
+        testID: BridgeViewSelectorsIDs.LIMIT_TAB,
+      });
+    }
+
+    if (isRecurringBuyTabEnabled) {
+      visibleTabs.push({
+        key: BridgeTabKey.Recurring,
+        label: strings('bridge.tabs.recurring'),
+        content: null,
+        testID: BridgeViewSelectorsIDs.RECURRING_TAB,
+      });
+    }
+
+    return visibleTabs;
+  }, [isLimitOrderTabEnabled, isRecurringBuyTabEnabled]);
+
+  const showTabsBar = tabs.length > 1;
+
+  const activeIndex = useMemo(
+    () =>
+      Math.max(
+        tabs.findIndex((tab) => tab.key === selectedTab),
+        0,
+      ),
+    [tabs, selectedTab],
+  );
+
+  const handleTabPress = useCallback(
+    (index: number) => {
+      const nextTab = (tabs[index]?.key as BridgeTabKey) ?? BridgeTabKey.Market;
+      setSelectedTab(nextTab);
+      startTransition(() => setRenderedTab(nextTab));
+    },
+    [tabs, setRenderedTab, setSelectedTab],
+  );
+
+  const goToPreviousTab = useCallback(() => {
+    if (activeIndex > 0) {
+      handleTabPress(activeIndex - 1);
+    } else {
+      handleBack();
+    }
+  }, [activeIndex, handleTabPress, handleBack]);
+
+  const goToNextTab = useCallback(() => {
+    if (activeIndex < tabs.length - 1) {
+      handleTabPress(activeIndex + 1);
+    }
+  }, [activeIndex, tabs.length, handleTabPress]);
+
+  const swipeGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .withTestId(BridgeViewSelectorsIDs.TABS_SWIPE_GESTURE)
+        .activeOffsetX([-50, 50])
+        .failOffsetY([-15, 15])
+        .maxPointers(1)
+        .onEnd((gestureEvent) => {
+          'worklet';
+          const { translationX, velocityX } = gestureEvent;
+
+          if (Math.abs(translationX) > 50 || Math.abs(velocityX) > 500) {
+            if (translationX > 0) {
+              scheduleOnRN(goToPreviousTab);
+            } else {
+              scheduleOnRN(goToNextTab);
+            }
+          }
+        }),
+    [goToPreviousTab, goToNextTab],
+  );
+
+  // A tab can disappear if its feature flag flips off while it's active
+  // (e.g. remote flag update). Fall back to Market rather than rendering
+  // nothing.
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.key === renderedTab)) {
+      setSelectedTab(BridgeTabKey.Market);
+      setRenderedTab(BridgeTabKey.Market);
+    }
+  }, [tabs, renderedTab, setRenderedTab, setSelectedTab]);
+
+  // Stop in-flight quote polling and discard quote-only local state on tab
+  // changes without clearing the shared token pair or source amount.
+  useEffect(
+    () => () => {
+      if (Engine.context.BridgeController?.resetState) {
+        Engine.context.BridgeController.resetState();
+      }
+      dispatch(setDestAmount(undefined));
+      dispatch(setSelectedQuoteRequestId(undefined));
+    },
+    [renderedTab, dispatch],
+  );
+
+  // Reset the full bridge state (selected tokens, amounts, and controller
+  // quote state) when the whole Bridge screen unmounts, i.e. the user
+  // leaves Bridge entirely, not just switching tabs within it. This lives
+  // here rather than in an individual tab's view so it fires exactly once
+  // regardless of which tab is active when the user navigates away.
+  useEffect(
+    () => () => {
+      dispatch(resetBridgeState());
+      if (Engine.context.BridgeController?.resetState) {
+        Engine.context.BridgeController.resetState();
+      }
+    },
+    [dispatch],
+  );
+
+  return (
+    <Box twClassName="flex-1 bg-default">
+      <HeaderStandard
+        title={headerTitle}
+        onBack={handleBack}
+        backButtonProps={{
+          testID: BridgeViewSelectorsIDs.BACK_BUTTON,
+          accessibilityLabel: strings('navigation.back'),
+        }}
+        endButtonIconProps={endButtonIconProps}
+        includesTopInset
+      />
+      {showTabsBar ? (
+        <TabsBar
+          tabs={tabs}
+          activeIndex={activeIndex}
+          onTabPress={handleTabPress}
+          testID={BridgeViewSelectorsIDs.TABS_BAR}
+        />
+      ) : null}
+      <GestureDetector gesture={swipeGesture}>
+        <Box twClassName="flex-1" testID={BridgeViewSelectorsIDs.TABS_CONTENT}>
+          {renderedTab === BridgeTabKey.Market ? (
+            <BridgeMarketView location={location} />
+          ) : null}
+          {renderedTab === BridgeTabKey.Limit ? (
+            <BridgeLimitOrderView location={location} />
+          ) : null}
+          {renderedTab === BridgeTabKey.Recurring ? (
+            <BridgeRecurringBuyView location={location} />
+          ) : null}
+        </Box>
+      </GestureDetector>
+    </Box>
+  );
+};
+
+export default BridgeView;

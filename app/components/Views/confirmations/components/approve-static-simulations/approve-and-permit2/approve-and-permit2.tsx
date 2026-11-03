@@ -1,0 +1,160 @@
+import React from 'react';
+import { View } from 'react-native';
+import { BigNumber } from 'bignumber.js';
+import { TransactionMeta } from '@metamask/transaction-controller';
+
+import I18n, { strings } from '../../../../../../../locales/i18n';
+import { formatAmountMaxPrecision } from '../../../../../UI/SimulationDetails/formatAmount';
+import { useStyles } from '../../../../../../component-library/hooks';
+import { ApproveComponentIDs } from '../../../ConfirmationView.testIds';
+import { useTransactionMetadataRequest } from '../../../hooks/transactions/useTransactionMetadataRequest';
+import { useApproveTransactionData } from '../../../hooks/useApproveTransactionData';
+import { useApproveTransactionActions } from '../../../hooks/useApproveTransactionActions';
+import { TokenStandard } from '../../../types/token';
+import InfoRow from '../../UI/info-row/info-row';
+import AlertRow from '../../UI/info-row/alert-row';
+import { RowAlertKey } from '../../UI/info-row/alert-row/constants';
+import Address from '../../UI/info-row/info-value/address';
+import { Pill } from '../../UI/pill';
+import { ApproveMethod } from '../../../types/approve';
+import { EditSpendingCapButton } from '../../edit-spending-cap-button';
+import styleSheet from '../shared-styles';
+
+export const ApproveAndPermit2 = () => {
+  const { styles } = useStyles(styleSheet, {});
+  const {
+    approveMethod,
+    amount,
+    decimals,
+    isRevoke,
+    tokenBalance,
+    tokenId,
+    tokenStandard,
+    tokenSymbol,
+    rawAmount,
+    spender,
+  } = useApproveTransactionData();
+  const { onSpendingCapUpdate } = useApproveTransactionActions();
+
+  const transactionMetadata =
+    useTransactionMetadataRequest() as TransactionMeta;
+  const isERC20 = tokenStandard === TokenStandard.ERC20;
+  const isERC721 = tokenStandard === TokenStandard.ERC721;
+  const shouldShow = isERC20 || isERC721;
+
+  if (!shouldShow) {
+    return null;
+  }
+
+  if (isRevoke) {
+    return (
+      <>
+        <InfoRow
+          label={
+            isERC20 ? strings('confirm.spending_cap') : strings('confirm.nfts')
+          }
+        >
+          <View style={styles.amountAndAddressContainer}>
+            <Address
+              address={transactionMetadata?.txParams?.to as string}
+              chainId={transactionMetadata.chainId}
+            />
+          </View>
+        </InfoRow>
+        {isERC20 && (
+          <InfoRow label={strings('confirm.permission_from')}>
+            <Address
+              address={spender ?? ''}
+              chainId={transactionMetadata.chainId}
+            />
+          </InfoRow>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <InfoRow
+        label={
+          isERC20
+            ? strings('confirm.spending_cap')
+            : strings('confirm.withdraw')
+        }
+      >
+        <View style={styles.amountAndAddressContainer}>
+          {isERC20 && (
+            <EditSpendingCapButton
+              spendingCapProps={{
+                approveMethod: approveMethod as ApproveMethod,
+                balance: tokenBalance ?? '0',
+                decimals: decimals ?? 1,
+                onSpendingCapUpdate,
+                spendingCap: rawAmount ?? '',
+                tokenSymbol,
+              }}
+            >
+              <PillAndAddress
+                amount={amount}
+                isERC20
+                tokenId={tokenId}
+                transactionMetadata={transactionMetadata}
+              />
+            </EditSpendingCapButton>
+          )}
+          {!isERC20 && (
+            <PillAndAddress
+              isERC20={isERC20}
+              tokenId={tokenId}
+              transactionMetadata={transactionMetadata}
+            />
+          )}
+        </View>
+      </InfoRow>
+      <AlertRow
+        alertField={RowAlertKey.Spender}
+        label={strings('confirm.spender')}
+      >
+        <Address
+          address={spender ?? ''}
+          chainId={transactionMetadata.chainId}
+        />
+      </AlertRow>
+    </>
+  );
+};
+
+interface PillAndAddressProps {
+  amount?: string;
+  isERC20: boolean;
+  tokenId?: string;
+  transactionMetadata: TransactionMeta;
+}
+
+function formatDisplayAmount(amount: string | undefined): string {
+  if (!amount) {
+    return '';
+  }
+  const value = new BigNumber(amount);
+  return value.isNaN() ? amount : formatAmountMaxPrecision(I18n.locale, value);
+}
+
+function PillAndAddress({
+  amount,
+  isERC20,
+  tokenId,
+  transactionMetadata,
+}: PillAndAddressProps) {
+  return (
+    <>
+      <Pill
+        testID={ApproveComponentIDs.SPENDING_CAP_VALUE}
+        text={isERC20 ? formatDisplayAmount(amount) : `#${tokenId}`}
+      />
+      <Address
+        address={transactionMetadata?.txParams?.to as string}
+        chainId={transactionMetadata.chainId}
+      />
+    </>
+  );
+}

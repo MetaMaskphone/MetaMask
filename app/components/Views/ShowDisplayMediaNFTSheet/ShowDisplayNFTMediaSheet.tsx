@@ -1,0 +1,103 @@
+// Third party dependencies
+import React, { useRef } from 'react';
+import {
+  HeaderStandard,
+  Text,
+  TextVariant,
+  TextColor,
+  FontWeight,
+} from '@metamask/design-system-react-native';
+
+// External dependencies
+import BottomSheet, {
+  BottomSheetRef,
+} from '../../../component-library/components/BottomSheets/BottomSheet';
+import BottomSheetFooter, {
+  ButtonsAlignment,
+} from '../../../component-library/components/BottomSheets/BottomSheetFooter';
+import {
+  ButtonSize,
+  ButtonVariants,
+} from '../../../component-library/components/Buttons/Button';
+import Engine from '../../../core/Engine';
+import { strings } from '../../../../locales/i18n';
+
+// Internal dependencies
+import createStyles from './ShowDisplayNFTMediaSheet.styles';
+import { UserProfileProperty } from '../../../util/metrics/UserSettingsAnalyticsMetaData/UserProfileAnalyticsMetaData.types';
+import { useAnalytics } from '../../hooks/useAnalytics/useAnalytics';
+
+const ShowDisplayNftMediaSheet = () => {
+  const styles = createStyles();
+  const sheetRef = useRef<BottomSheetRef>(null);
+  const { identify } = useAnalytics();
+
+  const onConfirm = () => {
+    const { PreferencesController } = Engine.context;
+    sheetRef.current?.onCloseBottomSheet(() => {
+      PreferencesController.setDisplayNftMedia(true);
+      const traits = {
+        [UserProfileProperty.ENABLE_OPENSEA_API]: UserProfileProperty.ON,
+      };
+      identify(traits);
+    });
+  };
+
+  const onCancel = () => {
+    sheetRef.current?.onCloseBottomSheet();
+  };
+
+  return (
+    <BottomSheet ref={sheetRef}>
+      <HeaderStandard
+        title={strings('show_display_nft_media.show_display_nft_media_title')}
+        onClose={onCancel}
+      />
+      <Text style={styles.textContent} color={TextColor.TextAlternative}>
+        {strings('show_display_nft_media.show_display_nft_media_content_1')}{' '}
+        {
+          <Text
+            variant={TextVariant.BodyMd}
+            color={TextColor.TextAlternative}
+            fontWeight={FontWeight.Bold}
+          >
+            {strings('show_display_nft_media.show_display_nft_media_content_2')}
+          </Text>
+        }{' '}
+        {strings('show_display_nft_media.show_display_nft_media_content_3')}
+        {'\n'}
+        {'\n'}
+        <Text color={TextColor.TextAlternative}>
+          {strings('show_display_nft_media.show_display_nft_media_content_4')}{' '}
+          <Text
+            variant={TextVariant.BodyMd}
+            color={TextColor.TextAlternative}
+            fontWeight={FontWeight.Bold}
+          >
+            {strings('show_display_nft_media.show_display_nft_media_content_5')}
+          </Text>
+        </Text>
+      </Text>
+      <BottomSheetFooter
+        buttonPropsArray={[
+          {
+            onPress: onCancel,
+            label: strings('confirmation_modal.cancel_cta'),
+            variant: ButtonVariants.Secondary,
+            size: ButtonSize.Lg,
+          },
+          {
+            onPress: onConfirm,
+            label: strings('confirmation_modal.confirm_cta'),
+            variant: ButtonVariants.Primary,
+            size: ButtonSize.Lg,
+          },
+        ]}
+        buttonsAlignment={ButtonsAlignment.Horizontal}
+        style={styles.footerContainer}
+      />
+    </BottomSheet>
+  );
+};
+
+export default ShowDisplayNftMediaSheet;

@@ -1,0 +1,193 @@
+// Third party dependencies
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  useRoute,
+  useNavigation,
+  RouteProp,
+  ParamListBase,
+} from '@react-navigation/native';
+import type { AppNavigationProp } from '../../../core/NavigationService/types';
+import { useSelector } from 'react-redux';
+import { InteractionManager } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// External dependencies
+import { InternalAccount } from '@metamask/keyring-internal-api';
+import { View } from 'react-native-animatable';
+import { strings } from '../../../../locales/i18n';
+import TextField from '../../../component-library/components/Form/TextField/TextField';
+import { formatAddress, getAddressAccountType } from '../../../util/address';
+import { EditAccountNameSelectorIDs } from './EditAccountName.testIds';
+
+import {
+  Button,
+  ButtonVariant,
+  ButtonSize,
+  FontWeight,
+  Text,
+  TextVariant,
+} from '@metamask/design-system-react-native';
+import { useStyles } from '../../../component-library/hooks';
+import { getEditAccountNameNavBarOptions } from '../../../components/UI/Navbar';
+import Engine from '../../../core/Engine';
+import { MetaMetricsEvents } from '../../../core/Analytics';
+import { selectChainId } from '../../../selectors/networkController';
+import {
+  doENSReverseLookup,
+  isDefaultAccountName,
+} from '../../../util/ENSUtils';
+import { useTheme } from '../../../util/theme';
+import { toChecksumHexAddress } from '@metamask/controller-utils';
+
+// Internal dependencies
+import styleSheet from './EditAccountName.styles';
+import { getDecimalChainId } from '../../../util/networks';
+import { useAnalytics } from '../../../components/hooks/useAnalytics/useAnalytics';
+
+interface RootNavigationParamList extends ParamListBase {
+  EditAccountName: {
+    selectedAccount: InternalAccount;
+  };
+}
+
+type EditAccountNameRouteProp = RouteProp<
+  RootNavigationParamList,
+  'EditAccountName'
+>;
+
+const EditAccountName = () => {
+  const route = useRoute<EditAccountNameRouteProp>();
+  const { selectedAccount } = route.params;
+  const { colors } = useTheme();
+  const { trackEvent, createEventBuilder } = useAnalytics();
+  const { styles } = useStyles(styleSheet, {});
+  const { setOptions, goBack, navigate } = useNavigation<AppNavigationProp>();
+  const [accountName, setAccountName] = useState<string>();
+  const [ens, setEns] = useState<string>();
+
+  const selectedChecksummedAddress = selectedAccount?.address
+    ? toChecksumHexAddress(selectedAccount.address)
+    : undefined;
+
+  const chainId = useSelector(selectChainId);
+
+  const lookupEns = useCallback(async () => {
+    if (selectedChecksummedAddress) {
+      try {
+        const accountEns = await doENSReverseLookup(
+          selectedChecksummedAddress,
+          chainId,
+        );
+
+        setEns(accountEns);
+        // eslint-disable-next-line no-empty
+      } catch {}
+    }
+  }, [selectedChecksummedAddress, chainId]);
+
+  useEffect(() => {
+    lookupEns();
+  }, [lookupEns]);
+
+  const updateNavBar = useCallback(() => {
+    setOptions(getEditAccountNameNavBarOptions(goBack, colors));
+  }, [setOptions, goBack, colors]);
+
+  useEffect(() => {
+    updateNavBar();
+  }, [updateNavBar]);
+
+  useEffect(() => {
+    const name = selectedAccount?.metadata.name;
+    setAccountName(isDefaultAccountName(name) && ens ? ens : name);
+  }, [ens, selectedAccount?.metadata.name]);
+
+  const onChangeName = (name: string) => {
+    setAccountName(name);
+  };
+
+  const saveAccountName = async () => {
+    InteractionManager.runAfterInteractions(async () => {
+      if (accountName && accountName.length > 0 && selectedAccount?.address) {
+        Engine.setAccountLabel(selectedAccount?.address, accountName);
+        navigate('WalletView');
+
+        try {
+          const analyticsProperties = async () => {
+            const accountType = getAddressAccountType(selectedAccount?.address);
+            const account_type =
+              accountType === 'QR Hardware' ? 'hardware' : accountType;
+            return { account_type, chain_id: getDecimalChainId(chainId) };
+          };
+          const analyticsProps = await analyticsProperties();
+          trackEvent(
+            createEventBuilder(MetaMetricsEvents.ACCOUNT_RENAMED)
+              .addProperties({ ...analyticsProps })
+              .build(),
+          );
+        } catch {
+          return {};
+        }
+      }
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.inputsContainer}>
+        <View style={styles.inputContainer}>
+          <Text variant={TextVariant.BodyLg} fontWeight={FontWeight.Medium}>
+            {strings('address_book.name')}
+          </Text>
+          <TextField
+            value={accountName}
+            onChangeText={onChangeName}
+            testID={EditAccountNameSelectorIDs.ACCOUNT_NAME_INPUT}
+            autoFocus
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <Text variant={TextVariant.BodyLg} fontWeight={FontWeight.Medium}>
+            {strings('address_book.address')}
+          </Text>
+          {selectedAccount?.address ? (
+            <TextField
+              isDisabled
+              placeholder={formatAddress(selectedAccount?.address, 'mid')}
+              autoFocus
+              testID="input"
+            />
+          ) : null}
+        </View>
+      </View>
+      <View style={styles.buttonsContainer}>
+        <Button
+          variant={ButtonVariant.Secondary}
+          size={ButtonSize.Lg}
+          isFullWidth
+          onPress={goBack}
+          style={styles.cancelButton}
+        >
+          {strings('address_book.cancel')}
+        </Button>
+        <Button
+          variant={ButtonVariant.Primary}
+          size={ButtonSize.Lg}
+          isFullWidth
+          onPress={saveAccountName}
+          style={
+            !accountName?.length
+              ? { ...styles.saveButton, ...styles.saveButtonDisabled }
+              : styles.saveButton
+          }
+          isDisabled={!accountName?.length || accountName?.trim() === ''}
+          testID={EditAccountNameSelectorIDs.EDIT_ACCOUNT_NAME_SAVE}
+        >
+          {strings('address_book.save')}
+        </Button>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+export default EditAccountName;

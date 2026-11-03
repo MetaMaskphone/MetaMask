@@ -1,0 +1,588 @@
+import PropTypes from 'prop-types';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from 'react';
+import { View } from 'react-native';
+import { captureScreen } from 'react-native-view-shot';
+import { connect, useSelector } from 'react-redux';
+import { deepEqual } from 'fast-equals';
+import { parseCaipAccountId } from '@metamask/utils';
+import { strings } from '../../../../locales/i18n';
+import { selectPermissionControllerState } from '../../../selectors/snaps';
+// eslint-disable-next-line import-x/no-restricted-paths -- TODO(ADR-0020): route-isolation backlog
+import { BrowserViewSelectorsIDs } from '../BrowserTab/BrowserView.testIds';
+import {
+  closeTab,
+  createNewTab,
+  setActiveTab,
+  updateTab,
+} from '../../../actions/browser';
+import { selectAvatarAccountType } from '../../../selectors/settings';
+import {
+  ToastContext,
+  ToastVariants,
+} from '../../../component-library/components/Toast';
+import { useAccounts } from '../../hooks/useAccounts';
+import { MetaMetricsEvents } from '../../../core/Analytics';
+import AppConstants from '../../../core/AppConstants';
+import {
+  getPermittedCaipAccountIdsByHostname,
+  sortMultichainAccountsByLastSelected,
+} from '../../../core/Permissions';
+import Logger from '../../../util/Logger';
+import getAccountNameWithENS from '../../../util/accounts';
+import Tabs from '../../UI/Tabs';
+// eslint-disable-next-line import-x/no-restricted-paths -- TODO(ADR-0020): route-isolation backlog
+import BrowserTab from '../BrowserTab/BrowserTab';
+import URL from 'url-parse';
+import { useAnalytics } from '../../hooks/useAnalytics/useAnalytics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { isTokenDiscoveryBrowserEnabled } from '../../../util/browser';
+import { useBuildPortfolioUrl } from '../../hooks/useBuildPortfolioUrl';
+import { THUMB_WIDTH, THUMB_HEIGHT } from '../../UI/Tabs/Tabs.constants';
+import { useStyles } from '../../hooks/useStyles';
+import styleSheet from './styles';
+import Routes from '../../../constants/navigation/Routes';
+import { MAX_BROWSER_TABS, MAX_MOUNTED_TABS } from './constants';
+import { getMountedTabIds } from './utils';
+///: BEGIN:ONLY_INCLUDE_IF(keyring-snaps)
+// eslint-disable-next-line import-x/no-restricted-paths -- TODO(ADR-0020): route-isolation backlog
+import DiscoveryTab from '../DiscoveryTab/DiscoveryTab';
+///: END:ONLY_INCLUDE_IF
+
+/**
+ * Component that wraps all the browser
+ * individual tabs and the tabs view
+ */
+export const BrowserPure = (props) => {
+  const {
+    route,
+    navigation,
+    createNewTab,
+    closeTab: triggerCloseTab,
+    setActiveTab,
+    updateTab,
+    activeTab: activeTabId,
+    tabs,
+  } = props;
+  const previousTabs = useRef(null);
+  const { top: topInset } = useSafeAreaInsets();
+  const { styles } = useStyles(styleSheet, { topInset });
+  const { trackEvent, createEventBuilder } = useAnalytics();
+  const { toastRef } = useContext(ToastContext);
+  const browserUrl = props.route?.params?.url;
+  const linkType = props.route?.params?.linkType;
+  const prevSiteHostname = useRef(browserUrl);
+  const { accounts, ensByAccountAddress } = useAccounts();
+  const [shouldShowTabs, setShouldShowTabs] = useState(false);
+
+  // Compute which tabs should be mounted (live WebView) based on recency
+  const mountedTabIds = useMemo(
+    () => getMountedTabIds(tabs, activeTabId, MAX_MOUNTED_TABS),
+    [tabs, activeTabId],
+  );
+
+  const accountAvatarType = useSelector(selectAvatarAccountType);
+
+  const permittedAccountsList = useSelector(selectPermissionControllerState);
+
+  const buildPortfolioUrlWithMetrics = useBuildPortfolioUrl();
+
+  const homePageUrl = useCallback(
+    () => buildPortfolioUrlWithMetrics(AppConstants.HOMEPAGE_URL).href,
+    [buildPortfolioUrlWithMetrics],
+  );
+
+  const [currentUrl, setCurrentUrl] = useState(browserUrl || homePageUrl());
+
+  const newTab = useCallback(
+    (url, linkType, { replaceActiveIfMax = false } = {}) => {
+      // if tabs.length > MAX_BROWSER_TABS, do not open a new tab
+      if (tabs.length >= MAX_BROWSER_TABS) {
+        const activeTab = tabs.find((tab) => tab.id === activeTabId);
+        if (url && replaceActiveIfMax && activeTab) {
+          // If replaceActiveIfMax is true and a URL was provided, open it in the active tab
+          updateTab(activeTab.id, {
+            url,
+          });
+          setCurrentUrl(url);
+          setShouldShowTabs(false);
+          return true; // Tab was updated successfully
+        }
+        // If replaceActiveIfMax is false or no URL was provided, show the max browser tabs modal
+        navigation.navigate(Routes.MODAL.MAX_BROWSER_TABS_MODAL);
+        return false; // No tab was created, modal shown instead
+      }
+      const newTabUrl = isTokenDiscoveryBrowserEnabled()
+        ? undefined
+        : url || homePageUrl();
+      // When a new tab is created, a new tab is rendered, which automatically sets the url source on the webview
+      createNewTab(newTabUrl, linkType);
+      return true; // Tab was created successfully
+    },
+    [
+      tabs,
+      navigation,
+      createNewTab,
+      homePageUrl,
+      activeTabId,
+      updateTab,
+      setCurrentUrl,
+      setShouldShowTabs,
+    ],
+  );
+  const updateTabInfo = useCallback(
+    (tabID, info) => {
+      updateTab(tabID, info);
+    },
+    [updateTab],
+  );
+
+  const hideTabsAndUpdateUrl = useCallback(
+    (url) => {
+      setShouldShowTabs(false);
+      setCurrentUrl(url);
+    },
+    [setShouldShowTabs, setCurrentUrl],
+  );
+
+  const takeScreenshot = useCallback(
+    (url, tabID) =>
+      new Promise((resolve, reject) => {
+        captureScreen({
+          format: 'jpg',
+          quality: 0.2,
+          THUMB_WIDTH,
+          THUMB_HEIGHT,
+        }).then(
+          (uri) => {
+            updateTab(tabID, {
+              url,
+              image: uri,
+            });
+            resolve(true);
+          },
+          (error) => {
+            Logger.error(error, `Error saving tab ${url}`);
+            reject(error);
+          },
+        );
+      }),
+    [updateTab],
+  );
+
+  const activeTabUrl = useMemo(
+    () => tabs.find((tab) => tab.id === activeTabId)?.url,
+    [tabs, activeTabId],
+  );
+
+  const switchToTab = useCallback(
+    async (tab) => {
+      // Capture screenshot of the current active tab before switching away.
+      // Skip when the Tabs grid is visible because captureScreen would capture
+      // the grid overlay, not the tab content. A correct screenshot was already
+      // taken when the user opened the Tabs view (in showTabsView).
+      if (
+        activeTabId &&
+        activeTabUrl &&
+        tab.id !== activeTabId &&
+        !shouldShowTabs
+      ) {
+        try {
+          await takeScreenshot(activeTabUrl, activeTabId);
+        } catch (e) {
+          Logger.error(e, 'Error capturing tab screenshot before switch');
+        }
+      }
+
+      trackEvent(
+        createEventBuilder(MetaMetricsEvents.BROWSER_SWITCH_TAB).build(),
+      );
+      setActiveTab(tab.id);
+      hideTabsAndUpdateUrl(tab.url);
+    },
+    [
+      activeTabId,
+      activeTabUrl,
+      shouldShowTabs,
+      takeScreenshot,
+      trackEvent,
+      createEventBuilder,
+      setActiveTab,
+      hideTabsAndUpdateUrl,
+    ],
+  );
+
+  const hasAccounts = useRef(Boolean(accounts.length));
+
+  useEffect(() => {
+    const checkIfActiveAccountChanged = (hostnameForToastCheck) => {
+      const permittedAccounts = getPermittedCaipAccountIdsByHostname(
+        permittedAccountsList,
+        hostnameForToastCheck,
+      );
+
+      const sortedPermittedAccounts =
+        sortMultichainAccountsByLastSelected(permittedAccounts);
+
+      if (!sortedPermittedAccounts.length) {
+        return;
+      }
+
+      const activeCaipAccountId = sortedPermittedAccounts[0];
+
+      const { address } = parseCaipAccountId(activeCaipAccountId);
+
+      const accountName = getAccountNameWithENS({
+        caipAccountId: activeCaipAccountId,
+        accounts,
+        ensByAccountAddress,
+      });
+
+      // Show active account toast
+      toastRef?.current?.showToast({
+        variant: ToastVariants.Account,
+        labelOptions: [
+          {
+            label: `${accountName} `,
+            isBold: true,
+          },
+          { label: strings('toast.now_active') },
+        ],
+        accountAddress: address,
+        accountAvatarType,
+      });
+    };
+
+    const urlForEffect = browserUrl || currentUrl;
+
+    if (accounts.length && urlForEffect) {
+      const newHostname = new URL(urlForEffect).hostname;
+      if (prevSiteHostname.current !== newHostname || !hasAccounts.current) {
+        checkIfActiveAccountChanged(newHostname);
+      }
+      hasAccounts.current = true;
+      prevSiteHostname.current = newHostname;
+    }
+  }, [
+    currentUrl,
+    browserUrl,
+    accounts,
+    permittedAccountsList,
+    ensByAccountAddress,
+    accountAvatarType,
+    toastRef,
+  ]);
+
+  // componentDidMount
+  useEffect(
+    () => {
+      const newTabUrl = route.params?.newTabUrl;
+      const existingTabId = route.params?.existingTabId;
+      const shouldShowTabsView = route.params?.showTabsView;
+      if (!newTabUrl && !existingTabId) {
+        // Nothing from deeplink, carry on.
+        const activeTab = tabs.find((tab) => tab.id === activeTabId);
+        if (activeTab) {
+          // Resume where last left off.
+          switchToTab(activeTab);
+          // If showTabsView param is passed and tabs exist, show the tabs view directly
+          if (shouldShowTabsView && tabs.length) {
+            setShouldShowTabs(true);
+          }
+        } else {
+          /* eslint-disable-next-line */
+          if (tabs.length) {
+            // Tabs exists but no active set. Show first tab.
+            switchToTab(tabs[0]);
+            // If showTabsView param is passed, show the tabs view directly
+            if (shouldShowTabsView) {
+              setShouldShowTabs(true);
+            }
+          } else {
+            // No tabs. Create a new one.
+            newTab();
+          }
+        }
+      }
+      // Initialize previous tabs. This prevents the next useEffect block from running the first time.
+      previousTabs.current = tabs || [];
+    },
+    /* eslint-disable-next-line */
+    [],
+  );
+
+  // Detect when new tab is added and switch to it.
+  useEffect(
+    () => {
+      if (previousTabs.current && tabs.length > previousTabs.current.length) {
+        // New tab was added.
+        const tabToSwitch = tabs[tabs.length - 1];
+        switchToTab(tabToSwitch);
+      }
+      previousTabs.current = tabs;
+    },
+    /* eslint-disable-next-line */
+    [tabs],
+  );
+
+  // Handle links with associated timestamp.
+  useEffect(
+    () => {
+      const newTabUrl = route.params?.newTabUrl;
+      const deeplinkTimestamp = route.params?.timestamp;
+      const existingTabId = route.params?.existingTabId;
+      const shouldShowTabsView = route.params?.showTabsView;
+      const fromTrending = route.params?.fromTrending;
+      if (newTabUrl && deeplinkTimestamp) {
+        // Open url from link.
+        // If coming from Explore (trending), replace active tab when at max capacity
+        newTab(newTabUrl, linkType, {
+          replaceActiveIfMax: fromTrending,
+        });
+      } else if (existingTabId) {
+        const existingTab = tabs.find((tab) => tab.id === existingTabId);
+        if (existingTab) {
+          switchToTab(existingTab);
+        }
+      } else if (shouldShowTabsView && tabs.length) {
+        // Show tabs view directly when showTabsView param is passed
+        setShouldShowTabs(true);
+      }
+    },
+    /* eslint-disable-next-line */
+    [
+      route.params?.timestamp,
+      route.params?.newTabUrl,
+      route.params?.existingTabId,
+      route.params?.showTabsView,
+    ],
+  );
+
+  const showTabsView = useCallback(async () => {
+    // Avoid a `throw` inside try/catch (unsupported by the React Compiler) by
+    // guarding up front; behavior is unchanged (the error is still logged and
+    // the tabs view is still shown).
+    if (!activeTabUrl) {
+      Logger.error(new Error('Active tab URL is not set'));
+    } else {
+      try {
+        await takeScreenshot(activeTabUrl, activeTabId);
+      } catch (e) {
+        Logger.error(e);
+      }
+    }
+
+    setShouldShowTabs(true);
+  }, [activeTabUrl, activeTabId, takeScreenshot]);
+
+  const closeTab = useCallback(
+    (tab) => {
+      // If the tab was selected we have to select
+      // the next one, and if there's no next one,
+      // we select the previous one.
+      if (tab.id === activeTabId) {
+        if (tabs.length > 1) {
+          tabs.forEach((t, i) => {
+            if (t.id === tab.id) {
+              let newTab = tabs[i - 1];
+              if (tabs[i + 1]) {
+                newTab = tabs[i + 1];
+              }
+              setActiveTab(newTab.id);
+              setCurrentUrl(newTab.url);
+            }
+          });
+        } else {
+          setCurrentUrl(null);
+        }
+      }
+
+      triggerCloseTab(tab.id);
+    },
+    [activeTabId, triggerCloseTab, tabs, setActiveTab],
+  );
+
+  const closeTabsView = useCallback(() => {
+    setShouldShowTabs(false);
+
+    // Check if the active tab still exists in the tabs list
+    const activeTabExists = tabs.some((tab) => tab.id === activeTabId);
+
+    // Navigate to Explore if:
+    // 1. No tabs exist, OR
+    // 2. Active tab was closed (activeTabId not in tabs)
+    if (tabs.length === 0 || !activeTabExists) {
+      navigation.navigate(Routes.TRENDING_VIEW);
+    }
+  }, [tabs, activeTabId, setShouldShowTabs, navigation]);
+
+  const renderTabList = useCallback(() => {
+    if (shouldShowTabs) {
+      return (
+        <Tabs
+          tabs={tabs}
+          activeTab={activeTabId}
+          switchToTab={switchToTab}
+          newTab={newTab}
+          closeTab={closeTab}
+          closeTabsView={closeTabsView}
+        />
+      );
+    }
+    return null;
+  }, [
+    shouldShowTabs,
+    tabs,
+    activeTabId,
+    switchToTab,
+    newTab,
+    closeTab,
+    closeTabsView,
+  ]);
+
+  const renderBrowserTabWindows = useCallback(
+    () =>
+      tabs
+        .filter((tab) => mountedTabIds.has(tab.id))
+        .map((tab) =>
+          tab.url || !isTokenDiscoveryBrowserEnabled() ? (
+            <BrowserTab
+              key={`tab_${tab.id}`}
+              id={tab.id}
+              initialUrl={tab.url}
+              linkType={tab.linkType}
+              updateTabInfo={updateTabInfo}
+              showTabs={showTabsView}
+              newTab={newTab}
+              isInTabsView={shouldShowTabs}
+              homePageUrl={homePageUrl()}
+              fromTrending={route.params?.fromTrending}
+              fromExploreSearch={route.params?.fromExploreSearch}
+              fromPerps={route.params?.fromPerps}
+              fromBenefit={route.params?.fromBenefit}
+              fromCard={route.params?.fromCard}
+              fromWhatsHappening={route.params?.fromWhatsHappening}
+              fromMarketInsights={route.params?.fromMarketInsights}
+              fromMoney={route.params?.fromMoney}
+              fromEarnStrategySelection={
+                route.params?.fromEarnStrategySelection
+              }
+            />
+          ) : (
+            <DiscoveryTab
+              key={`tab_${tab.id}`}
+              id={tab.id}
+              showTabs={showTabsView}
+              newTab={newTab}
+              updateTabInfo={updateTabInfo}
+            />
+          ),
+        ),
+    [
+      tabs,
+      mountedTabIds,
+      shouldShowTabs,
+      newTab,
+      homePageUrl,
+      updateTabInfo,
+      showTabsView,
+      route.params?.fromTrending,
+      route.params?.fromExploreSearch,
+      route.params?.fromPerps,
+      route.params?.fromBenefit,
+      route.params?.fromCard,
+      route.params?.fromWhatsHappening,
+      route.params?.fromMarketInsights,
+      route.params?.fromMoney,
+      route.params?.fromEarnStrategySelection,
+    ],
+  );
+
+  return (
+    <View
+      style={styles.browserContainer}
+      testID={BrowserViewSelectorsIDs.BROWSER_SCREEN_ID}
+    >
+      {renderBrowserTabWindows()}
+      {renderTabList()}
+    </View>
+  );
+};
+
+const Browser = React.memo(BrowserPure);
+Browser.displayName = 'Browser';
+Browser.propTypes = BrowserPure.propTypes;
+
+const mapStateToProps = (state) => ({
+  tabs: state.browser.tabs,
+  activeTab: state.browser.activeTab,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  createNewTab: (url, linkType) => dispatch(createNewTab(url, linkType)),
+  closeTab: (id) => dispatch(closeTab(id)),
+  setActiveTab: (id) => dispatch(setActiveTab(id)),
+  updateTab: (id, url) => dispatch(updateTab(id, url)),
+});
+
+BrowserPure.propTypes = {
+  /**
+   * react-navigation object used to switch between screens
+   */
+  navigation: PropTypes.object,
+  /**
+   * Function to create a new tab
+   */
+  createNewTab: PropTypes.func,
+  /**
+   * Function to close a specific tab
+   */
+  closeTab: PropTypes.func,
+  /**
+   * Function to set the active tab
+   */
+  setActiveTab: PropTypes.func,
+  /**
+   * Function to set the update the url of a tab
+   */
+  updateTab: PropTypes.func,
+  /**
+   * Array of tabs
+   */
+  tabs: PropTypes.array,
+  /**
+   * ID of the active tab
+   */
+  activeTab: PropTypes.number,
+  /**
+   * Object that represents the current route info like params passed to it
+   */
+  route: PropTypes.object,
+};
+
+export { default as createBrowserNavDetails } from './Browser.types';
+
+const ConnectedBrowser = connect(mapStateToProps, mapDispatchToProps)(Browser);
+ConnectedBrowser.displayName = 'ConnectedBrowser';
+
+const MemoConnectedBrowser = ({ route, ...props }) => {
+  // Keep a referentially-stable `route` to prevent extra re-renders when the
+  // route object is re-created but deeply equal. Uses the render-time state
+  // update pattern instead of reading/writing a ref during render, which the
+  // React Compiler disallows.
+  const [stableRoute, setStableRoute] = useState(route);
+  if (!deepEqual(stableRoute, route)) {
+    setStableRoute(route);
+  }
+  return <ConnectedBrowser route={stableRoute} {...props} />;
+};
+MemoConnectedBrowser.propTypes = BrowserPure.propTypes;
+
+export default MemoConnectedBrowser;

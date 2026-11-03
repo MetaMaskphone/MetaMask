@@ -1,0 +1,62 @@
+// Third party dependencies.
+import React from 'react';
+import { render, screen } from '@testing-library/react-native';
+
+// Internal dependencies.
+import { BADGENETWORK_TEST_ID } from '../Badge/variants/BadgeNetwork/BadgeNetwork.constants';
+import BadgeWrapper from './BadgeWrapper';
+import {
+  SAMPLE_BADGEWRAPPER_PROPS,
+  BADGE_WRAPPER_BADGE_TEST_ID,
+  BOTTOM_BADGEWRAPPER_BADGEPOSITION,
+} from './BadgeWrapper.constants';
+
+jest.mock('../../../hooks', () => {
+  const mockUseComponentSize = jest.fn(() => ({
+    size: null,
+    onLayout: jest.fn(),
+  }));
+  const { useStyles } = jest.requireActual('../../../hooks');
+
+  return {
+    useStyles,
+    useComponentSize: mockUseComponentSize,
+    __mockUseComponentSize: mockUseComponentSize,
+  };
+});
+
+const { __mockUseComponentSize: mockUseComponentSize } =
+  jest.requireMock('../../../hooks');
+
+describe('BadgeWrapper', () => {
+  beforeEach(() => {
+    mockUseComponentSize.mockClear();
+    mockUseComponentSize.mockImplementation(() => ({
+      size: null,
+      onLayout: jest.fn(),
+    }));
+  });
+
+  it('renders anchor content, network badge, and wrapper test id', () => {
+    render(<BadgeWrapper {...SAMPLE_BADGEWRAPPER_PROPS} />);
+
+    expect(screen.getByTestId(BADGE_WRAPPER_BADGE_TEST_ID)).toBeOnTheScreen();
+    expect(screen.getByText('C')).toBeOnTheScreen();
+    expect(screen.getByTestId(BADGENETWORK_TEST_ID)).toBeOnTheScreen();
+    expect(screen.getByTestId('network-avatar-image')).toBeOnTheScreen();
+  });
+
+  it('passes anchorSize to useComponentSize for immediate badge positioning', () => {
+    const anchorSize = { width: 24, height: 24 };
+
+    render(
+      <BadgeWrapper
+        {...SAMPLE_BADGEWRAPPER_PROPS}
+        badgePosition={BOTTOM_BADGEWRAPPER_BADGEPOSITION}
+        anchorSize={anchorSize}
+      />,
+    );
+
+    expect(mockUseComponentSize).toHaveBeenCalledWith(anchorSize);
+  });
+});
