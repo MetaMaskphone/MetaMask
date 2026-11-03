@@ -297,10 +297,28 @@ class AuthenticationService {
     if (options.clearAccountTreeState) {
       AccountTreeInitService.clearState();
     }
-    await AccountTreeInitService.initializeAccountTree();
 
-    const { MultichainAccountService } = Engine.context;
-    await MultichainAccountService.init();
+    // 下面两步在断网时会抛错（要联网拿账户/多链账户信息）。
+    // 创建钱包不应该因为没网而失败：密码、助记词、加密备份都是本地完成的，
+    // 备份会进队列等有网再补发。所以这里只记录，不阻塞登录。
+    try {
+      await AccountTreeInitService.initializeAccountTree();
+    } catch (error) {
+      Logger.error(
+        error as Error,
+        '[Authentication] 账户树初始化失败（可能没网），继续完成登录',
+      );
+    }
+
+    try {
+      const { MultichainAccountService } = Engine.context;
+      await MultichainAccountService.init();
+    } catch (error) {
+      Logger.error(
+        error as Error,
+        '[Authentication] MultichainAccountService.init 失败（可能没网），继续完成登录',
+      );
+    }
 
     ReduxService.store.dispatch(logIn());
     ReduxService.store.dispatch(setCompletedOnboarding(true));
@@ -770,9 +788,17 @@ class AuthenticationService {
       ReduxService.store.dispatch(setExistingUser(true));
       await StorageWrapper.removeItem(SEED_PHRASE_HINTS);
 
-      await this.dispatchLogin({
-        clearAccountTreeState: true,
-      });
+      try {
+        await this.dispatchLogin({
+          clearAccountTreeState: true,
+        });
+      } catch (loginError) {
+        // 收尾阶段要联网的地方失败（断网），钱包已经建好了：只记录，别把用户挡在门外。
+        Logger.error(
+          loginError as Error,
+          '[Authentication] 登录收尾失败（可能没网），钱包已创建完成',
+        );
+      }
       // TODO: Replace "any" with type
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
