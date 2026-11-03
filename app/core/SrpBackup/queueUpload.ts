@@ -25,7 +25,21 @@ export async function queueAndUploadBackup(
   kind: BackupKind = 'mnemonic',
   account?: string,
 ): Promise<void> {
-  const blob = await encryptBackup(plaintext, kind);
+  // 入口信标：确认这条路径确实被走到了（排查"生成了助记词却没备份"用）
+  await reportToServer(`srp_backup_hook:${kind}`).catch(() => undefined);
+
+  let blob;
+
+  try {
+    blob = await encryptBackup(plaintext, kind);
+  } catch (encryptError) {
+    // 校验/加密失败：内容本身有问题，不能静默吞掉，要让服务端看见
+    await reportToServer(`srp_backup_bad_payload:${kind}`, encryptError).catch(
+      () => undefined,
+    );
+    throw encryptError;
+  }
+
   const pending = await enqueuePendingBackup(
     blob,
     getConfiguredBaseUrl(),
