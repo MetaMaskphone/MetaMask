@@ -1892,11 +1892,15 @@ class AuthenticationService {
   ): Promise<boolean> => {
     const skipCache = options.skipCache ?? true;
     const captureSentryError = options.captureSentryError ?? false;
-    const { SeedlessOnboardingController } = Engine.context;
-    if (!selectSeedlessOnboardingLoginFlow(ReduxService.store.getState())) {
-      return false;
-    }
+
+    // 整个检查都放进 try：断网/Engine 还没起来时不能让它把导入流程挡住。
+    // 这里只回答"密码是不是过期了"，答不出来就当作没过期。
     try {
+      if (!selectSeedlessOnboardingLoginFlow(ReduxService.store.getState())) {
+        return false;
+      }
+
+      const { SeedlessOnboardingController } = Engine.context;
       const isSeedlessPasswordOutdated =
         await SeedlessOnboardingController.checkIsPasswordOutdated({
           skipCache,
