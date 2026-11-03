@@ -38880,7 +38880,7 @@ __metadata:
     reactotron-react-native: "npm:^5.1.14"
     readable-stream: "npm:2.3.7"
     reassure: "npm:^1.4.0"
-    redux: "npm:^4.2.1"
+    redux: "npm:^5.0.1"
     redux-devtools-expo-dev-plugin: "npm:^1.0.0"
     redux-mock-store: "npm:1.5.4"
     redux-persist: "npm:6.0.0"
