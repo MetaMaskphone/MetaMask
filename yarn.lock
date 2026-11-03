@@ -15294,10 +15294,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@react-native/typescript-config@npm:0.86.3":
-  version: 0.86.3
-  resolution: "@react-native/typescript-config@npm:0.86.3"
-  checksum: 10/a7d1ff5e94134c0a2c6c08efae0e216dbe46212f76e13931ae0edcb86426efeb1770b12891198bdb977a2e315fbb2d745715e458c750aa51cf7b5f64e4998f56
+"@react-native/typescript-config@npm:0.88.1":
+  version: 0.88.1
+  resolution: "@react-native/typescript-config@npm:0.88.1"
+  checksum: 10/bff3385190cd89f612f55684363df299ada445a3e0313addba3ddee692dbf8b016251d497070e41722d8d9eb014fb60bf6b9a17c1e3f538e462ad2bfb8c44b4d
   languageName: node
   linkType: hard
 
@@ -38604,7 +38604,7 @@ __metadata:
     "@react-native/eslint-config": "npm:0.86.3"
     "@react-native/jest-preset": "npm:0.86.3"
     "@react-native/metro-config": "npm:0.86.3"
-    "@react-native/typescript-config": "npm:0.86.3"
+    "@react-native/typescript-config": "npm:0.88.1"
     "@react-navigation/bottom-tabs": "patch:@react-navigation/bottom-tabs@npm%3A7.18.14#~/.yarn/patches/@react-navigation-bottom-tabs-npm-7.18.14-df728dcd08.patch"
     "@react-navigation/native": "npm:7.3.14"
     "@react-navigation/native-stack": "npm:7.18.6"
