@@ -495,7 +495,7 @@
     "@react-native-community/cli-platform-ios": "20.1.0",
     "@react-native-community/cli-server-api": "20.1.0",
     "@react-native-community/datetimepicker": "^8.5.1",
-    "@react-native-community/netinfo": "11.5.2",
+    "@react-native-community/netinfo": "12.0.1",
     "@react-native-community/slider": "5.2.0",
     "@react-native-cookies/cookies": "patch:@react-native-cookies/cookies@npm%3A6.2.1#~/.yarn/patches/@react-native-cookies-cookies-npm-6.2.1-13b1e04ec5.patch",
     "@react-native-firebase/app": "^24.0.0",
