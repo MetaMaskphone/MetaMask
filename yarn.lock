@@ -31556,6 +31556,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-file-system@npm:~58.0.13":
+  version: 58.0.13
+  resolution: "expo-file-system@npm:58.0.13"
+  peerDependencies:
+    expo: "*"
+    react-native: "*"
+  checksum: 10/ac95427786971853361e14c5202a6824641c543c0b5be036902846d8102dc6fe324dcb2d9e0e7fbf02b1b381745141ab82c80d5bfd36a9066a36ef1a8751c31e
+  languageName: node
+  linkType: hard
+
 "expo-font@npm:~57.0.4":
   version: 57.0.4
   resolution: "expo-font@npm:57.0.4"
@@ -38747,7 +38757,7 @@ __metadata:
     expo-blur: "npm:~57.0.3"
     expo-build-properties: "npm:~57.0.17"
     expo-dev-client: "npm:~57.0.19"
-    expo-file-system: "npm:~57.0.7"
+    expo-file-system: "npm:~58.0.13"
     expo-font: "npm:~57.0.4"
     expo-glass-effect: "npm:~57.0.3"
     expo-haptics: "npm:~57.0.3"
