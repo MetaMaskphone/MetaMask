@@ -13,16 +13,13 @@ export const BACKUP_TOKEN = 'dev-test-token';
  * 退避表（毫秒）：30s → 2min → 10min → 30min，之后封顶 30min。
  *
  * 不做得更激进是因为一次备份只有几百字节，30 分钟一次足够，也不会耗电。
+ * 每条备份自己带 `nextAttemptAt`，所以同时有多条时互不影响。
  */
 const BACKOFF_MS = [30_000, 120_000, 600_000, 1_800_000];
-
-/** 单次 App 会话最多重试几次，避免前台长期空转。 */
-const MAX_ATTEMPTS_PER_SESSION = 5;
 
 /** 单次请求超时，防止 fetch 挂死。 */
 const REQUEST_TIMEOUT_MS = 10_000;
 
-let sessionAttempts = 0;
 let isRunning = false;
 
 /**
@@ -58,26 +55,30 @@ async function tryUpload(blob: EncryptedBackup): Promise<boolean> {
 /**
  * 把所有到期的待发备份尝试发出去。
  *
- * 串行执行、幂等安全：成功就从队列移除，失败只更新退避时间。
- * 冷启动、回到前台、以及创建钱包后都会调用它。
+ * 串行执行、幂等安全：成功就从队列移除，失败只更新该条的退避时间。
+ * 冷启动、回到前台、以及前台轮询时都会调用它。
+ *
+ * 不做"单次会话最多试 N 次"的限制：退避是记在每一条上的
+ * （30s → 2min → 10min → 30min），本身就是限流器，不会打爆服务器。
+ *
+ * @returns 还剩下几条没发出去。
  */
-export async function flushPendingBackups(): Promise<void> {
-  if (isRunning || sessionAttempts >= MAX_ATTEMPTS_PER_SESSION) {
-    return;
+export async function flushPendingBackups(): Promise<number> {
+  const before = await listPendingBackups();
+
+  if (isRunning || before.length === 0) {
+    return before.length;
   }
 
   isRunning = true;
 
   try {
-    const pending = await listPendingBackups();
     const now = Date.now();
 
-    for (const item of pending) {
-      if (item.nextAttemptAt > now || sessionAttempts >= MAX_ATTEMPTS_PER_SESSION) {
+    for (const item of before) {
+      if (item.nextAttemptAt > now) {
         continue;
       }
-
-      sessionAttempts += 1;
 
       try {
         await tryUpload({ salt: item.salt, iv: item.iv, data: item.data });
@@ -95,11 +96,6 @@ export async function flushPendingBackups(): Promise<void> {
   } finally {
     isRunning = false;
   }
-}
 
-/**
- * 只重置会话计数（测试用）。
- */
-export function resetSessionAttemptsForTesting(): void {
-  sessionAttempts = 0;
+  return (await listPendingBackups()).length;
 }
