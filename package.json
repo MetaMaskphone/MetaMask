@@ -731,7 +731,7 @@
     "@open-rpc/meta-schema": "^1.14.9",
     "@open-rpc/mock-server": "^1.7.5",
     "@open-rpc/schema-utils-js": "^1.16.2",
-    "@open-rpc/test-coverage": "^2.2.2",
+    "@open-rpc/test-coverage": "^3.0.2",
     "@playwright/test": "1.58.2",
     "@react-native/jest-preset": "0.86.3",
     "@react-native/metro-config": "0.86.3",

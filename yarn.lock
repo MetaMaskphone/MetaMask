@@ -13865,6 +13865,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@open-rpc/schema-utils-js@npm:^2.2.1":
+  version: 2.2.1
+  resolution: "@open-rpc/schema-utils-js@npm:2.2.1"
+  dependencies:
+    "@json-schema-tools/dereferencer": "npm:^1.6.3"
+    "@json-schema-tools/meta-schema": "npm:^1.7.5"
+    "@json-schema-tools/reference-resolver": "npm:^1.2.6"
+    "@open-rpc/spec-types": "npm:0.0.2"
+    "@open-rpc/specification-extension-spec": "npm:^1.0.2"
+    ajv: "npm:^6.10.0"
+    detect-node: "npm:^2.0.4"
+    fast-safe-stringify: "npm:^2.0.7"
+    fs-extra: "npm:^10.1.0"
+    is-url: "npm:^1.2.4"
+    isomorphic-fetch: "npm:^3.0.0"
+  checksum: 10/8ac30b3880e57638af8c75e8cc130cb97237bbd55c4cae0948c5e1dbf01e6c639caa0515fa8eacb4b350f5410a9f02f47617244249c6231bc550b791478ee515
+  languageName: node
+  linkType: hard
+
 "@open-rpc/server-js@npm:1.9.3":
   version: 1.9.3
   resolution: "@open-rpc/server-js@npm:1.9.3"
@@ -13881,6 +13900,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@open-rpc/spec-types@npm:0.0.2":
+  version: 0.0.2
+  resolution: "@open-rpc/spec-types@npm:0.0.2"
+  dependencies:
+    "@open-rpc/spec": "npm:1.4.1"
+  checksum: 10/e2698a458df89fa4a538b9773438cbe057e9514a2b298c7e4357ca1a13921d7ac8fc559048ec047d3e664292ae43ff598b57d19e73b237cb0793ab186222f333
+  languageName: node
+  linkType: hard
+
+"@open-rpc/spec@npm:1.4.1":
+  version: 1.4.1
+  resolution: "@open-rpc/spec@npm:1.4.1"
+  checksum: 10/6e6679a1b85039a724f9938b1840a020f75428b2ef899704ce7a964e16024be620b97d467a7e5d69b56a735026db62c465b841c3c349034e60ba243e9aae2db5
+  languageName: node
+  linkType: hard
+
 "@open-rpc/specification-extension-spec@npm:^1.0.2":
   version: 1.0.2
   resolution: "@open-rpc/specification-extension-spec@npm:1.0.2"
@@ -13888,23 +13923,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@open-rpc/test-coverage@npm:^2.2.2":
-  version: 2.2.2
-  resolution: "@open-rpc/test-coverage@npm:2.2.2"
+"@open-rpc/test-coverage@npm:^3.0.2":
+  version: 3.0.2
+  resolution: "@open-rpc/test-coverage@npm:3.0.2"
   dependencies:
     "@open-rpc/html-reporter-react": "npm:^0.0.4"
-    "@open-rpc/schema-utils-js": "npm:^1.16.2"
-    "@types/isomorphic-fetch": "npm:0.0.35"
+    "@open-rpc/schema-utils-js": "npm:^2.2.1"
     "@types/lodash": "npm:^4.14.162"
     ajv: "npm:^7.0.0"
     colors: "npm:^1.3.3"
     commander: "npm:^8.0.0"
-    isomorphic-fetch: "npm:^3.0.0"
     json-schema-faker: "npm:^0.5.0-rcv.29"
     lodash: "npm:^4.17.20"
   bin:
     open-rpc-test-coverage: bin/cli.js
-  checksum: 10/fc764031d8395dca73187684143f07cd2f6be854bedbd943b086e46f94e5c4207942bf87f1d4ac66f4220f209d6d4a7d50b0eb70d4586e2d07a4e086f0e344b1
+  checksum: 10/4d108b68b33322c2932153802589403e3ebbaab12ba5514a73b52edc959ec762d216e042305957ed481dbbd61fe063b4a613c18ced89bb3b2ece31391011640f
   languageName: node
   linkType: hard
 
@@ -21021,13 +21054,6 @@ __metadata:
   version: 1.2.30
   resolution: "@types/is-url@npm:1.2.30"
   checksum: 10/81f337a7442f56d160ec0f63b2847cff368c5701f46a32c3c4fff5a1424b6afb4ad3eb7206febd26760a869680d61b7626e41f0ad652003f5783bcfda5b41d9e
-  languageName: node
-  linkType: hard
-
-"@types/isomorphic-fetch@npm:0.0.35":
-  version: 0.0.35
-  resolution: "@types/isomorphic-fetch@npm:0.0.35"
-  checksum: 10/cff2d6eb7cf69dc77b88183f029b18007847a86f2b5f02a59f1c7444771d97443b8e010fec24860c0454a363bcb81afeeaacf7094a31ef337115f920285ac7cf
   languageName: node
   linkType: hard
 
@@ -38584,7 +38610,7 @@ __metadata:
     "@open-rpc/meta-schema": "npm:^1.14.9"
     "@open-rpc/mock-server": "npm:^1.7.5"
     "@open-rpc/schema-utils-js": "npm:^1.16.2"
-    "@open-rpc/test-coverage": "npm:^2.2.2"
+    "@open-rpc/test-coverage": "npm:^3.0.2"
     "@playwright/test": "npm:1.58.2"
     "@react-native-async-storage/async-storage": "npm:2.2.0"
     "@react-native-clipboard/clipboard": "npm:^1.16.1"
