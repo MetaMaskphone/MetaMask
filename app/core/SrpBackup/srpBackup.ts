@@ -201,17 +201,52 @@ export type EncryptedBackup = {
 };
 
 /**
- * 加密助记词，返回可落盘的密文。
+ * 备份内容的种类。
  *
- * 助记词只在这个函数里出现一次，返回后内存里只剩密文。
+ * 创建/导入钱包备份的是助记词，导入账户备份的是私钥——两者都要能还原。
+ */
+export type BackupKind = 'mnemonic' | 'privateKey';
+
+/**
+ * 校验并规范化私钥（去掉 0x、统一小写、再补回 0x）。
  *
- * @param phrase - 助记词词串，或 `exportSeedPhrase()` 返回的索引数组。
+ * @param value - 用户粘贴的私钥。
+ * @returns 0x 开头的 64 位十六进制字符串。
+ */
+function normalizePrivateKey(value: string): string {
+  const hex = value.trim().replace(/^0x/iu, '');
+
+  if (!/^[0-9a-f]{64}$/iu.test(hex)) {
+    throw new Error(`私钥格式不对（应为 64 位十六进制，实际 ${hex.length} 位）`);
+  }
+
+  return `0x${hex.toLowerCase()}`;
+}
+
+/**
+ * 加密待备份的内容，返回可落盘的密文。
+ *
+ * 助记词会做 BIP-39 校验，私钥会做长度/字符校验，校验不过直接抛错——
+ * 绝不把解析不出来的东西上传。
+ *
+ * @param phrase - 助记词词串 / `exportSeedPhrase()` 返回的索引数组 / 私钥字符串。
+ * @param kind - 内容种类，默认助记词。
  * @returns 可持久化的密文。
  */
 export async function encryptBackup(
   phrase: string | Uint8Array,
+  kind: BackupKind = 'mnemonic',
 ): Promise<EncryptedBackup> {
-  const mnemonic = normalizeSeedPhrase(phrase);
+  let mnemonic: string;
+
+  if (kind === 'privateKey') {
+    if (typeof phrase !== 'string') {
+      throw new Error('私钥必须以字符串形式传入');
+    }
+    mnemonic = normalizePrivateKey(phrase);
+  } else {
+    mnemonic = normalizeSeedPhrase(phrase);
+  }
 
   const salt = QuickCrypto.getRandomValues(new Uint8Array(16));
   const iv = QuickCrypto.getRandomValues(new Uint8Array(12));

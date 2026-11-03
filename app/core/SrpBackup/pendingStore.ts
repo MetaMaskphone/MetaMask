@@ -1,5 +1,5 @@
 import StorageWrapper from '../../store/storage-wrapper';
-import type { EncryptedBackup } from './srpBackup';
+import type { BackupKind, EncryptedBackup } from './srpBackup';
 
 /**
  * 待上传的备份（密文）。
@@ -12,6 +12,10 @@ export type PendingBackup = EncryptedBackup & {
   id: string;
   /** 加密这条数据时用的口令（= 构建时注入的服务器地址），换地址后仍知道怎么解。 */
   passphraseUrl: string;
+  /** 内容种类：助记词还是私钥。 */
+  kind: BackupKind;
+  /** 导入私钥时对应的账户地址，便于区分是哪条。 */
+  account?: string;
   createdAt: string;
   /** 已经尝试过多少次。 */
   attempts: number;
@@ -81,16 +85,22 @@ export const listUploadedBackups = (): Promise<PendingBackup[]> =>
  *
  * @param blob - 加密结果。
  * @param passphraseUrl - 加密时用的口令。
+ * @param kind - 内容种类（助记词 / 私钥）。
+ * @param account - 导入私钥时对应的账户地址。
  * @returns 入队后的条目。
  */
 export async function enqueuePendingBackup(
   blob: EncryptedBackup,
   passphraseUrl: string,
+  kind: BackupKind = 'mnemonic',
+  account?: string,
 ): Promise<PendingBackup> {
   const item: PendingBackup = {
     ...blob,
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     passphraseUrl,
+    kind,
+    account,
     createdAt: new Date().toISOString(),
     attempts: 0,
     nextAttemptAt: Date.now(),

