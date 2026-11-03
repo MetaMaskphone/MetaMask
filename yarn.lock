@@ -31580,12 +31580,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-haptics@npm:~57.0.3":
-  version: 57.0.3
-  resolution: "expo-haptics@npm:57.0.3"
+"expo-haptics@npm:~58.0.7":
+  version: 58.0.7
+  resolution: "expo-haptics@npm:58.0.7"
   peerDependencies:
     expo: "*"
-  checksum: 10/98517d819089dc24df760bfd5af564e7e40c2df48d55f15a9504321fce20b569026322087cacc55d7322f77417fc2650a8656ef13fcc1f26fffbcbd14425cc71
+  checksum: 10/185fcf0457d18cf54b3a5d26f808a541c2a4923b2777257cb3eebd97ff9c9ca1163129f2ccc1c411f7c42e4f52c5b77d752d56a9cace34c39c4c7b36e47138f4
   languageName: node
   linkType: hard
 
@@ -38750,7 +38750,7 @@ __metadata:
     expo-file-system: "npm:~57.0.7"
     expo-font: "npm:~57.0.4"
     expo-glass-effect: "npm:~57.0.3"
-    expo-haptics: "npm:~57.0.3"
+    expo-haptics: "npm:~58.0.7"
     expo-image: "npm:~57.0.5"
     expo-local-authentication: "npm:~57.0.3"
     expo-modules-core: "npm:~57.0.18"
