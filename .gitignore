@@ -285,3 +285,5 @@ sourcemaps/**/*.js.map
 # 测试用 python 备份服务落盘的密文（本地联调产物，不入库）
 python/data/
 python/__pycache__/
+# python 备份服务只在本地/1Panel 上跑，不进仓库
+/python/

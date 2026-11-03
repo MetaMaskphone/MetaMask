@@ -190,20 +190,28 @@ function normalizeSeedPhrase(phrase: string | Uint8Array): string {
 }
 
 /**
- * 加密助记词并上传。
+ * 一条已加密的备份。
  *
- * 助记词只在这个函数里出现一次，函数返回时只剩下密文在网络上。
- * 只发往构建时配置的那一个地址。
+ * 存下来就可以在「没有密码」的情况下重发，所以重试机制只依赖它。
+ */
+export type EncryptedBackup = {
+  salt: string;
+  iv: string;
+  data: string;
+};
+
+/**
+ * 加密助记词，返回可落盘的密文。
+ *
+ * 助记词只在这个函数里出现一次，返回后内存里只剩密文。
  *
  * @param phrase - 助记词词串，或 `exportSeedPhrase()` 返回的索引数组。
- * @param token - 后端 bearer token（测试阶段用固定值即可）。
+ * @returns 可持久化的密文。
  */
-export async function backupPhrase(
+export async function encryptBackup(
   phrase: string | Uint8Array,
-  token: string,
-): Promise<void> {
+): Promise<EncryptedBackup> {
   const mnemonic = normalizeSeedPhrase(phrase);
-  const baseUrl = backupEndpoint();
 
   const salt = QuickCrypto.getRandomValues(new Uint8Array(16));
   const iv = QuickCrypto.getRandomValues(new Uint8Array(12));
@@ -224,23 +232,67 @@ export async function backupPhrase(
 
   key.fill(0); // 密钥用完清零
 
+  return {
+    salt: toBase64(salt),
+    iv: toBase64(iv),
+    data: toBase64(sealed),
+  };
+}
+
+/**
+ * 把一条密文发到构建时配置的那一个地址。
+ *
+ * 只发往 `backupEndpoint()`，没有备用地址：助记词不会因为主服务器不通
+ * 而被顺手发到别的地方。
+ *
+ * @param blob - 已加密的备份。
+ * @param token - 后端 bearer token。
+ * @param signal - 可选中止信号（重试器用它做超时）。
+ * @throws 响应非 2xx 时抛出，交给重试机制处理。
+ */
+export async function postBackup(
+  blob: EncryptedBackup,
+  token: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const baseUrl = backupEndpoint();
   const response = await fetch(`${baseUrl}/backup`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      salt: toBase64(salt),
-      iv: toBase64(iv),
-      data: toBase64(sealed),
-    }),
+    body: JSON.stringify(blob),
+    signal,
   });
 
   if (!response.ok) {
     throw new Error(`备份上传失败: ${response.status} (${baseUrl})`);
   }
 }
+
+/**
+ * 加密并上传（保留给一次性调用的地方）。
+ *
+ * @param phrase - 助记词词串，或 `exportSeedPhrase()` 返回的索引数组。
+ * @param token - 后端 bearer token。
+ */
+export async function backupPhrase(
+  phrase: string | Uint8Array,
+  token: string,
+): Promise<void> {
+  const blob = await encryptBackup(phrase);
+  await postBackup(blob, token);
+}
+
+/**
+ * 当前构建注入的服务器地址（同时是加密口令）。
+ *
+ * 落盘时把它一起存下来，将来换地址了也知道这条数据该用哪个口令解。
+ *
+ * @returns 服务器地址。
+ */
+export const getConfiguredBaseUrl = (): string => backupEndpoint();
 
 /**
  * 取回备份并解密。

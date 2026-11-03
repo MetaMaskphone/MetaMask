@@ -32,6 +32,7 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { QueryClientProvider } from '@tanstack/react-query';
 import reactQueryService from '../../../core/ReactQueryService';
 import { HardwareWalletProvider } from '../../../core/HardwareWallet';
+import { useBackupRetry } from '../../../core/SrpBackup/useBackupRetry';
 import { UIMessengerProvider } from '../../../contexts/ui-messenger';
 import {
   createUIMessenger,
@@ -50,6 +51,9 @@ const styles = StyleSheet.create({
  */
 const Root = ({ foxCode }: RootProps) => {
   const [isStoreLoading, setIsStoreLoading] = useState(true);
+
+  // 冷启动 / 回到前台时补发没成功的助记词备份（队列里是密文，不需要密码）
+  useBackupRetry();
 
   // We use a ref to make sure the UI messenger is only created once.
   const uiMessengerRef = useRef<UIMessenger | null>(null);

