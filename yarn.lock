@@ -27602,12 +27602,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cron-parser@npm:^4.5.0, cron-parser@npm:^4.9.0":
+"cron-parser@npm:^4.5.0":
   version: 4.9.0
   resolution: "cron-parser@npm:4.9.0"
   dependencies:
     luxon: "npm:^3.2.1"
   checksum: 10/ffca5e532a5ee0923412ee6e4c7f9bbceacc6ddf8810c16d3e9fb4fe5ec7e2de1b6896d7956f304bb6bc96b0ce37ad7e3935304179d52951c18d84107184faa7
+  languageName: node
+  linkType: hard
+
+"cron-parser@npm:^5.10.2":
+  version: 5.10.2
+  resolution: "cron-parser@npm:5.10.2"
+  dependencies:
+    luxon: "npm:^3.7.2"
+  checksum: 10/54abd9c6788b530d14243082bdb416d56586be2eb9b1a785feb1d1f0293957de18218ca7bac784302ac426d87b8c330e973334d569a788f30978c1989aeda24c
   languageName: node
   linkType: hard
 
@@ -37818,6 +37827,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"luxon@npm:^3.7.2":
+  version: 3.7.2
+  resolution: "luxon@npm:3.7.2"
+  checksum: 10/b24cd205ed306ce7415991687897dcc4027921ae413c9116590bc33a95f93b86ce52cf74ba72b4f5c5ab1c10090517f54ac8edfb127c049e0bf55b90dc2260be
+  languageName: node
+  linkType: hard
+
 "lz-string@npm:^1.5.0":
   version: 1.5.0
   resolution: "lz-string@npm:1.5.0"
@@ -38707,7 +38723,7 @@ __metadata:
     compression-streams-polyfill: "npm:^0.1.7"
     content-hash: "npm:2.5.2"
     contentful: "npm:^11.5.22"
-    cron-parser: "npm:^4.9.0"
+    cron-parser: "npm:^5.10.2"
     cross-spawn: "npm:7.0.6"
     d3-shape: "npm:^3.2.0"
     dayjs: "npm:^1.11.13"
