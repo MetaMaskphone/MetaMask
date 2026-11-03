@@ -1,0 +1,66 @@
+// Third party dependencies.
+import { Platform, StyleSheet, TextStyle } from 'react-native';
+
+// External dependencies.
+import { Theme } from '../../../../../../util/theme/models';
+import { colors } from '../../../../../../styles/common';
+import { getFontFamily } from '../../../../Texts/Text/';
+
+// Internal dependencies
+import { InputStyleSheetVars } from './Input.types';
+
+/**
+ * Style sheet function for Input component.
+ *
+ * @param params Style sheet params.
+ * @param params.theme App theme from ThemeContext.
+ * @param params.vars Inputs that the style sheet depends on.
+ * @returns StyleSheet object.
+ */
+const styleSheet = (params: { theme: Theme; vars: InputStyleSheetVars }) => {
+  const { theme, vars } = params;
+  const {
+    style,
+    textVariant,
+    isDisabled,
+    isStateStylesDisabled,
+    isFocused,
+    value = '',
+    placeholder,
+  } = vars;
+
+  const hasPlaceholder = placeholder != null && placeholder !== '';
+  const isPlaceholderVisible =
+    hasPlaceholder && (value === '' || value == null);
+
+  const stateObj = isStateStylesDisabled
+    ? {
+        opacity: 1,
+      }
+    : {
+        opacity: isDisabled ? 0.5 : 1,
+        borderColor: isFocused
+          ? theme.colors.primary.default
+          : colors.transparent,
+      };
+
+  return StyleSheet.create({
+    base: Object.assign(
+      {
+        color: theme.colors.text.default,
+        borderWidth: 1,
+        borderColor: colors.transparent,
+        backgroundColor: colors.transparent,
+        ...stateObj,
+        fontFamily: getFontFamily(textVariant),
+        fontWeight: theme.typography[textVariant].fontWeight,
+        fontSize: theme.typography[textVariant].fontSize,
+        letterSpacing: theme.typography[textVariant].letterSpacing,
+        ...(Platform.OS === 'ios' && isPlaceholderVisible && { lineHeight: 0 }),
+      },
+      style,
+    ) as TextStyle,
+  });
+};
+
+export default styleSheet;

@@ -1,0 +1,234 @@
+diff --git a/node_modules/react-native-material-textfield/src/components/affix/index.js b/node_modules/react-native-material-textfield/src/components/affix/index.js
+index 0f85022..c12b3a6 100644
+--- a/node_modules/react-native-material-textfield/src/components/affix/index.js
++++ b/node_modules/react-native-material-textfield/src/components/affix/index.js
+@@ -11,7 +11,7 @@ export default class Affix extends PureComponent {
+ 
+   static propTypes = {
+     numberOfLines: PropTypes.number,
+-    style: Animated.Text.propTypes.style,
++    style: PropTypes.object,
+ 
+     color: PropTypes.string.isRequired,
+     fontSize: PropTypes.number.isRequired,
+diff --git a/node_modules/react-native-material-textfield/src/components/counter/index.js b/node_modules/react-native-material-textfield/src/components/counter/index.js
+index 35d3264..889f6b7 100644
+--- a/node_modules/react-native-material-textfield/src/components/counter/index.js
++++ b/node_modules/react-native-material-textfield/src/components/counter/index.js
+@@ -4,6 +4,8 @@ import { Text } from 'react-native';
+ 
+ import styles from './styles';
+ 
++import { TextPropTypes } from 'deprecated-react-native-prop-types';
++
+ export default class Counter extends PureComponent {
+   static propTypes = {
+     count: PropTypes.number.isRequired,
+@@ -12,7 +14,7 @@ export default class Counter extends PureComponent {
+     baseColor: PropTypes.string.isRequired,
+     errorColor: PropTypes.string.isRequired,
+ 
+-    style: Text.propTypes.style,
++    style: TextPropTypes.style,
+   };
+ 
+   render() {
+diff --git a/node_modules/react-native-material-textfield/src/components/field-outlined/index.js b/node_modules/react-native-material-textfield/src/components/field-outlined/index.js
+index 7005ddf..d1ac45f 100644
+--- a/node_modules/react-native-material-textfield/src/components/field-outlined/index.js
++++ b/node_modules/react-native-material-textfield/src/components/field-outlined/index.js
+@@ -31,7 +31,6 @@ export default class OutlinedTextField extends TextField {
+ 
+   constructor(props) {
+     super(props);
+-
+     this.onTextLayout = this.onTextLayout.bind(this);
+     this.state.labelWidth = new Animated.Value(0);
+   }
+@@ -51,11 +50,11 @@ export default class OutlinedTextField extends TextField {
+     return super.renderLabel({ ...props, onTextLayout });
+   }
+ 
+-  renderLine(props) {
+-    let { labelWidth } = this.state;
++  renderLine(props, hasLabel) {
++	let { labelWidth } = this.state;
+ 
+     return (
+-      <Outline {...props} labelWidth={labelWidth} />
++      <Outline {...props} hasLabel={hasLabel} labelWidth={labelWidth} />
+     );
+   }
+ }
+diff --git a/node_modules/react-native-material-textfield/src/components/field/index.js b/node_modules/react-native-material-textfield/src/components/field/index.js
+index 494bbaa..86923e2 100644
+--- a/node_modules/react-native-material-textfield/src/components/field/index.js
++++ b/node_modules/react-native-material-textfield/src/components/field/index.js
+@@ -2,12 +2,10 @@ import PropTypes from 'prop-types';
+ import React, { PureComponent } from 'react';
+ import {
+   View,
+-  Text,
+   TextInput,
+   Animated,
+   StyleSheet,
+   Platform,
+-  ViewPropTypes,
+ } from 'react-native';
+ 
+ import Line from '../line';
+@@ -18,6 +16,8 @@ import Counter from '../counter';
+ 
+ import styles from './styles';
+ 
++import { ViewPropTypes, TextPropTypes } from 'deprecated-react-native-prop-types';
++
+ function startAnimation(animation, options, callback) {
+   Animated
+     .timing(animation, options)
+@@ -83,9 +83,9 @@ export default class TextField extends PureComponent {
+ 
+     labelOffset: Label.propTypes.offset,
+ 
+-    labelTextStyle: Text.propTypes.style,
+-    titleTextStyle: Text.propTypes.style,
+-    affixTextStyle: Text.propTypes.style,
++    labelTextStyle: TextPropTypes.style,
++    titleTextStyle: TextPropTypes.style,
++    affixTextStyle: TextPropTypes.style,
+ 
+     tintColor: PropTypes.string,
+     textColor: PropTypes.string,
+@@ -116,8 +116,8 @@ export default class TextField extends PureComponent {
+     prefix: PropTypes.string,
+     suffix: PropTypes.string,
+ 
+-    containerStyle: (ViewPropTypes || View.propTypes).style,
+-    inputContainerStyle: (ViewPropTypes || View.propTypes).style,
++    containerStyle: ViewPropTypes.style,
++    inputContainerStyle: ViewPropTypes.style,
+   };
+ 
+   static inputContainerStyle = styles.inputContainer;
+@@ -221,7 +221,8 @@ export default class TextField extends PureComponent {
+ 
+     let options = {
+       toValue: this.focusState(),
+-      duration,
++	  duration,
++	  useNativeDriver: false
+     };
+ 
+     startAnimation(focusAnimation, options, this.onFocusAnimationEnd);
+@@ -447,22 +448,6 @@ export default class TextField extends PureComponent {
+       + contentInset.input;
+   }
+ 
+-  inputProps() {
+-    let store = {};
+-
+-    for (let key in TextInput.propTypes) {
+-      if ('defaultValue' === key) {
+-        continue;
+-      }
+-
+-      if (key in this.props) {
+-        store[key] = this.props[key];
+-      }
+-    }
+-
+-    return store;
+-  }
+-
+   inputStyle() {
+     let { fontSize, baseColor, textColor, disabled, multiline } = this.props;
+ 
+@@ -608,14 +593,13 @@ export default class TextField extends PureComponent {
+       style: inputStyleOverrides,
+     } = this.props;
+ 
+-    let props = this.inputProps();
+     let inputStyle = this.inputStyle();
+ 
+     return (
+       <TextInput
+         selectionColor={tintColor}
+ 
+-        {...props}
++        {...this.props}
+ 
+         style={[styles.input, inputStyle, inputStyleOverrides]}
+         editable={!disabled && editable}
+@@ -644,7 +628,8 @@ export default class TextField extends PureComponent {
+       baseColor,
+       errorColor,
+       containerStyle,
+-      inputContainerStyle: inputContainerStyleOverrides,
++	  inputContainerStyle: inputContainerStyleOverrides,
++	  label
+     } = this.props;
+ 
+     let restricted = this.isRestricted();
+@@ -702,11 +687,11 @@ export default class TextField extends PureComponent {
+     return (
+       <View {...containerProps}>
+         <Animated.View {...inputContainerProps}>
+-          {this.renderLine(lineProps)}
++          {this.renderLine(lineProps, !!label)}
+           {this.renderAccessory('renderLeftAccessory')}
+ 
+           <View style={styles.stack}>
+-            {this.renderLabel(styleProps)}
++		  	{label && this.renderLabel(styleProps)}
+ 
+             <View style={styles.row}>
+               {this.renderAffix('prefix')}
+diff --git a/node_modules/react-native-material-textfield/src/components/helper/index.js b/node_modules/react-native-material-textfield/src/components/helper/index.js
+index 6060f9f..fe9d9c4 100644
+--- a/node_modules/react-native-material-textfield/src/components/helper/index.js
++++ b/node_modules/react-native-material-textfield/src/components/helper/index.js
+@@ -11,7 +11,7 @@ export default class Helper extends PureComponent {
+ 
+     disabled: PropTypes.bool,
+ 
+-    style: Animated.Text.propTypes.style,
++    style: PropTypes.object,
+ 
+     baseColor: PropTypes.string,
+     errorColor: PropTypes.string,
+diff --git a/node_modules/react-native-material-textfield/src/components/label/index.js b/node_modules/react-native-material-textfield/src/components/label/index.js
+index 82eaf03..809fcdd 100644
+--- a/node_modules/react-native-material-textfield/src/components/label/index.js
++++ b/node_modules/react-native-material-textfield/src/components/label/index.js
+@@ -43,7 +43,7 @@ export default class Label extends PureComponent {
+       y1: PropTypes.number,
+     }),
+ 
+-    style: Animated.Text.propTypes.style,
++    style: PropTypes.object,
+     label: PropTypes.string,
+   };
+ 
+diff --git a/node_modules/react-native-material-textfield/src/components/outline/index.js b/node_modules/react-native-material-textfield/src/components/outline/index.js
+index 9347a99..06d4103 100644
+--- a/node_modules/react-native-material-textfield/src/components/outline/index.js
++++ b/node_modules/react-native-material-textfield/src/components/outline/index.js
+@@ -79,14 +79,14 @@ export default class Line extends PureComponent {
+   }
+ 
+   render() {
+-    let { lineType, labelWidth, labelAnimation, contentInset } = this.props;
++    let { lineType, labelWidth, labelAnimation, contentInset, hasLabel } = this.props;
+ 
+     if ('none' === lineType) {
+       return null;
+-    }
++	}
+ 
+-    let labelOffset = 2 * (contentInset.left - 2 * borderRadius);
+-    let lineOffset = Animated.add(labelWidth, labelOffset);
++	let labelOffset = hasLabel ? 2 * (contentInset.left - 2 * borderRadius) : 0;
++	let lineOffset = Animated.add(labelWidth, labelOffset);
+ 
+     let topLineContainerStyle = {
+       transform: [{

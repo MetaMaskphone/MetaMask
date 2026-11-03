@@ -1,0 +1,16 @@
+/app/core/InpageBridgeWeb3.js
+/app/util/blockies.js
+__snapshots__
+android
+coverage
+ios
+jest.preprocessor.js
+node_modules
+CHANGELOG.md
+wdio
+wdio.conf.js
+scripts
+.detoxrc.js
+.prettierignore
+locales
+.rnstorybook/storybook.requires.ts

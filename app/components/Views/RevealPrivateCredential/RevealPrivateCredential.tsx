@@ -1,0 +1,413 @@
+/* eslint-disable no-mixed-spaces-and-tabs */
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useContext,
+  useRef,
+} from 'react';
+import { Linking } from 'react-native';
+import {
+  useNavigation,
+  useRoute,
+  StackActions,
+} from '@react-navigation/native';
+import type { AppNavigationProp } from '../../../core/NavigationService/types';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import {
+  BannerAlert,
+  BannerAlertSeverity,
+  Box,
+  HeaderStandard,
+  Text,
+  TextColor,
+  TextVariant,
+} from '@metamask/design-system-react-native';
+import ActionView from '../../UI/ActionView';
+import { ScreenshotDeterrent } from '../../UI/ScreenshotDeterrent';
+import { SRP_GUIDE_URL } from '../../../constants/urls';
+import ClipboardManager from '../../../core/ClipboardManager';
+import { MetaMetricsEvents } from '../../../core/Analytics/MetaMetrics.events';
+import { passwordRequirementsMet } from '../../../util/password';
+import Device from '../../../util/device';
+import { strings } from '../../../../locales/i18n';
+import AppConstants from '../../../core/AppConstants';
+import { RevealSeedViewSelectorsIDs } from './RevealSeedView.testIds';
+import { selectSelectedInternalAccountFormattedAddress } from '../../../selectors/accountsController';
+import { useAnalytics } from '../../../components/hooks/useAnalytics/useAnalytics';
+import { IconName as IconNameLibrary } from '../../../component-library/components/Icons/Icon';
+import {
+  ButtonIconVariant,
+  ToastContext,
+  ToastVariants,
+} from '../../../component-library/components/Toast';
+import Routes from '../../../constants/navigation/Routes';
+import {
+  SRPQuizIntroduction,
+  SRPSecurityQuiz,
+  PasswordEntry,
+  SRPTabView,
+} from './components';
+import { useRevealCredential, useSRPQuiz } from './hooks';
+import {
+  IRevealPrivateCredentialProps,
+  RevealPrivateCredentialRouteProp,
+  RevealSrpStage,
+} from './types';
+
+// Locales such as Greek wrap this title onto a second line, which defaults to
+// left alignment inside the centered header column.
+const HEADER_TITLE_PROPS = {
+  twClassName: 'text-center',
+  testID: RevealSeedViewSelectorsIDs.REVEAL_CREDENTIAL_TITLE_ID,
+} as const;
+
+const RevealPrivateCredential = ({
+  cancel,
+  showCancelButton,
+}: IRevealPrivateCredentialProps) => {
+  const navigation = useNavigation<AppNavigationProp>();
+  const route = useRoute<RevealPrivateCredentialRouteProp>();
+  const tabBarHeight = useContext(BottomTabBarHeightContext);
+  const { bottom: safeAreaBottom } = useSafeAreaInsets();
+  const bottomSpacing = tabBarHeight ?? safeAreaBottom;
+  const hasNavigation = !cancel;
+  const shouldUpdateNav = route?.params?.shouldUpdateNav;
+  const keyringId = route?.params?.keyringId;
+
+  const [clipboardEnabled, setClipboardEnabled] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showSeedPhrase, setShowSeedPhrase] = useState<boolean>(false);
+
+  const { toastRef } = useContext(ToastContext);
+
+  const checkSummedAddress = useSelector(
+    selectSelectedInternalAccountFormattedAddress,
+  );
+  const { trackEvent, createEventBuilder } = useAnalytics();
+
+  const selectedAddress =
+    route?.params?.selectedAccount?.address || checkSummedAddress;
+
+  const {
+    unlocked,
+    password,
+    warningIncorrectPassword,
+    clipboardPrivateCredential,
+    setPassword,
+    revealCredential,
+    tryUnlock,
+  } = useRevealCredential({
+    selectedAddress,
+    keyringId,
+  });
+
+  const {
+    revealSrpStage,
+    currentQuestionIndex,
+    questionAnswered,
+    correctAnswer,
+    handleGetStartedClick,
+    handleQuestionAnswerClick,
+    handleAnsweredQuestionClick,
+  } = useSRPQuiz({
+    initialStage: route?.params?.skipQuiz
+      ? RevealSrpStage.ActionViewScreen
+      : undefined,
+  });
+
+  const headerNavigationBack = useCallback(() => {
+    trackEvent(
+      createEventBuilder(MetaMetricsEvents.GO_BACK_SRP_SCREEN).build(),
+    );
+    if (hasNavigation) {
+      navigation.goBack();
+    } else {
+      cancel?.();
+    }
+  }, [hasNavigation, navigation, cancel, trackEvent, createEventBuilder]);
+
+  // Only when user reaches the action view (after quiz): track once, then attempt reveal once.
+  const hasRunRevealForActionView = useRef(false);
+  useEffect(() => {
+    if (revealSrpStage !== RevealSrpStage.ActionViewScreen) return;
+    if (hasRunRevealForActionView.current) return;
+    hasRunRevealForActionView.current = true;
+    trackEvent(createEventBuilder(MetaMetricsEvents.REVEAL_SRP_SCREEN).build());
+    revealCredential();
+  }, [revealSrpStage, revealCredential, trackEvent, createEventBuilder]);
+
+  useEffect(() => {
+    if (Device.isAndroid()) {
+      Device.getDeviceAPILevel()
+        .then((apiLevel) => {
+          setClipboardEnabled(
+            apiLevel >= AppConstants.LEAST_SUPPORTED_ANDROID_API_LEVEL,
+          );
+        })
+        .catch(() => {
+          setClipboardEnabled(true);
+        });
+    } else {
+      setClipboardEnabled(true);
+    }
+  }, []);
+
+  const navigateBack = useCallback(() => {
+    if (!hasNavigation) {
+      cancel?.();
+      return;
+    }
+    if (route?.params?.popToTopOnDone) {
+      navigation.dispatch(StackActions.popToTop());
+      return;
+    }
+    if (shouldUpdateNav) {
+      navigation.dispatch(StackActions.pop());
+      return;
+    }
+    navigation.dispatch(StackActions.pop());
+  }, [
+    hasNavigation,
+    shouldUpdateNav,
+    navigation,
+    cancel,
+    route?.params?.popToTopOnDone,
+  ]);
+
+  const cancelReveal = useCallback(() => {
+    if (!unlocked)
+      trackEvent(
+        createEventBuilder(MetaMetricsEvents.REVEAL_SRP_CANCELLED)
+          .addProperties({
+            view: 'Enter password',
+          })
+          .build(),
+      );
+
+    trackEvent(
+      createEventBuilder(MetaMetricsEvents.CANCEL_REVEAL_SRP_CTA).build(),
+    );
+    if (cancel) return cancel();
+    navigateBack();
+  }, [unlocked, trackEvent, createEventBuilder, cancel, navigateBack]);
+
+  const done = useCallback(() => {
+    trackEvent(createEventBuilder(MetaMetricsEvents.SRP_DONE_CTA).build());
+    navigateBack();
+  }, [trackEvent, createEventBuilder, navigateBack]);
+
+  const handleLearnMoreClick = useCallback(() => {
+    if (hasNavigation) {
+      navigation.navigate(Routes.WEBVIEW.MAIN, {
+        screen: Routes.WEBVIEW.SIMPLE,
+        params: {
+          url: SRP_GUIDE_URL,
+        },
+      });
+    } else {
+      Linking.openURL(SRP_GUIDE_URL);
+    }
+  }, [hasNavigation, navigation]);
+
+  const onTabBarChange = useCallback(
+    (event: { i: number }) => {
+      if (event.i === 0) {
+        trackEvent(
+          createEventBuilder(MetaMetricsEvents.REVEAL_SRP_COMPLETED)
+            .addProperties({ action: 'viewed SRP' })
+            .build(),
+        );
+        trackEvent(createEventBuilder(MetaMetricsEvents.VIEW_SRP).build());
+      } else if (event.i === 1) {
+        trackEvent(
+          createEventBuilder(MetaMetricsEvents.REVEAL_SRP_COMPLETED)
+            .addProperties({ action: 'viewed QR code' })
+            .build(),
+        );
+        trackEvent(createEventBuilder(MetaMetricsEvents.VIEW_SRP_QR).build());
+      }
+    },
+    [trackEvent, createEventBuilder],
+  );
+
+  const lastCopyTimeRef = useRef<number>(0);
+  const COPY_THROTTLE_MS = 2000;
+
+  const copyPrivateCredentialToClipboard = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastCopyTimeRef.current < COPY_THROTTLE_MS) {
+      return;
+    }
+    lastCopyTimeRef.current = now;
+
+    trackEvent(
+      createEventBuilder(MetaMetricsEvents.REVEAL_SRP_COMPLETED)
+        .addProperties({
+          action: 'copied to clipboard',
+        })
+        .build(),
+    );
+
+    trackEvent(createEventBuilder(MetaMetricsEvents.COPY_SRP).build());
+    await ClipboardManager.setStringExpire(clipboardPrivateCredential);
+
+    toastRef?.current?.showToast({
+      variant: ToastVariants.Plain,
+      labelOptions: [
+        {
+          label: strings('reveal_credential.copied_to_clipboard'),
+        },
+      ],
+      hasNoTimeout: false,
+      closeButtonOptions: {
+        variant: ButtonIconVariant.Icon,
+        iconName: IconNameLibrary.Close,
+        onPress: () => {
+          toastRef?.current?.closeToast();
+        },
+      },
+    });
+  }, [trackEvent, createEventBuilder, clipboardPrivateCredential, toastRef]);
+
+  const renderSRPExplanation = () => (
+    <Text variant={TextVariant.BodyMd} color={TextColor.TextAlternative}>
+      {strings('reveal_credential.seed_phrase_explanation')[0]}{' '}
+      <Text color={TextColor.PrimaryDefault} onPress={handleLearnMoreClick}>
+        {strings('reveal_credential.seed_phrase_explanation')[1]}
+      </Text>{' '}
+      {strings('reveal_credential.seed_phrase_explanation')[2]}{' '}
+      <Text variant={TextVariant.BodyMd} color={TextColor.TextAlternative}>
+        {strings('reveal_credential.seed_phrase_explanation')[3]}
+      </Text>
+    </Text>
+  );
+
+  const renderWarning = () => (
+    <BannerAlert
+      severity={BannerAlertSeverity.Danger}
+      description={strings('reveal_credential.seed_phrase_warning_explanation')}
+      twClassName="mt-6"
+      testID={RevealSeedViewSelectorsIDs.SEED_PHRASE_WARNING_ID}
+    />
+  );
+
+  const renderActionView = () => (
+    <ActionView
+      cancelText={
+        unlocked
+          ? strings('reveal_credential.done')
+          : strings('reveal_credential.cancel')
+      }
+      confirmText={strings('reveal_credential.confirm')}
+      onCancelPress={unlocked ? done : cancelReveal}
+      onConfirmPress={() => tryUnlock()}
+      showConfirmButton={!unlocked}
+      confirmDisabled={!passwordRequirementsMet(password)}
+      cancelTestID={
+        RevealSeedViewSelectorsIDs.SECRET_RECOVERY_PHRASE_CANCEL_BUTTON_ID
+      }
+      confirmTestID={
+        RevealSeedViewSelectorsIDs.SECRET_RECOVERY_PHRASE_NEXT_BUTTON_ID
+      }
+      scrollViewTestID={RevealSeedViewSelectorsIDs.REVEAL_CREDENTIAL_SCROLL_ID}
+      showCancelButton={Boolean(showCancelButton || unlocked)}
+      enableOnAndroid
+      enableAutomaticScroll
+      extraScrollHeight={40}
+      showsVerticalScrollIndicator={false}
+    >
+      <>
+        <Box twClassName="p-5 pb-0">
+          <>
+            {unlocked ? (
+              <Text
+                variant={TextVariant.BodyMd}
+                color={TextColor.TextAlternative}
+              >
+                {strings('reveal_credential.reveal_srp_description')}
+              </Text>
+            ) : (
+              renderSRPExplanation()
+            )}
+            {unlocked ? null : renderWarning()}
+          </>
+        </Box>
+        {unlocked ? (
+          <SRPTabView
+            clipboardPrivateCredential={clipboardPrivateCredential}
+            showSeedPhrase={showSeedPhrase}
+            clipboardEnabled={clipboardEnabled}
+            onRevealSeedPhrase={() => setShowSeedPhrase(!showSeedPhrase)}
+            onCopyToClipboard={copyPrivateCredentialToClipboard}
+            onTabChange={onTabBarChange}
+          />
+        ) : (
+          <Box twClassName="p-5 pb-0">
+            <PasswordEntry
+              password={password}
+              onPasswordChange={setPassword}
+              onSubmit={tryUnlock}
+              warningMessage={warningIncorrectPassword}
+              showPassword={showPassword}
+              onToggleShowPassword={() => setShowPassword(!showPassword)}
+            />
+          </Box>
+        )}
+      </>
+    </ActionView>
+  );
+
+  const renderContent = () => {
+    if (revealSrpStage === RevealSrpStage.Introduction) {
+      return (
+        <SRPQuizIntroduction
+          onGetStarted={handleGetStartedClick}
+          onLearnMore={handleLearnMoreClick}
+        />
+      );
+    }
+    if (revealSrpStage === RevealSrpStage.Quiz) {
+      return (
+        <SRPSecurityQuiz
+          currentQuestionIndex={currentQuestionIndex}
+          questionAnswered={questionAnswered}
+          correctAnswer={correctAnswer}
+          onAnswerClick={handleQuestionAnswerClick}
+          onContinueClick={handleAnsweredQuestionClick}
+          onLearnMore={handleLearnMoreClick}
+        />
+      );
+    }
+    return renderActionView();
+  };
+
+  return (
+    <Box
+      twClassName="flex-1 h-full bg-default"
+      style={{ paddingBottom: bottomSpacing }}
+      testID={RevealSeedViewSelectorsIDs.REVEAL_CREDENTIAL_CONTAINER_ID}
+    >
+      <HeaderStandard
+        title={strings('reveal_credential.seed_phrase_title')}
+        titleProps={HEADER_TITLE_PROPS}
+        onBack={headerNavigationBack}
+        backButtonProps={{
+          testID: RevealSeedViewSelectorsIDs.REVEAL_CREDENTIAL_BACK_BUTTON_ID,
+        }}
+        includesTopInset
+      />
+      {renderContent()}
+      <ScreenshotDeterrent
+        enabled
+        isSRP
+        hasNavigation={hasNavigation}
+        warnOnScreenshot={unlocked}
+      />
+    </Box>
+  );
+};
+
+export default RevealPrivateCredential;

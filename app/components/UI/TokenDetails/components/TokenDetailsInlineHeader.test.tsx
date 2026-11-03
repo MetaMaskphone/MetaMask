@@ -1,0 +1,478 @@
+import React from 'react';
+import { Text } from 'react-native';
+import { render, fireEvent, within } from '@testing-library/react-native';
+import type { TokenSecurityData } from '@metamask/assets-controllers';
+import Routes from '../../../../constants/navigation/Routes';
+import { TokenDetailsInlineHeader } from './TokenDetailsInlineHeader';
+import type { TokenDetailsRouteParams } from '../constants/constants';
+import { FLOATING_HEADER_FADE_TEST_ID } from '../../../../component-library/components-temp/HeaderGlass';
+
+const mockNavigate = jest.fn();
+const mockCopyContractAddress = jest.fn();
+const mockResolveTokenContractAddress = jest.fn();
+const mockIsStockToken = jest.fn(() => false);
+
+jest.mock('../../../../component-library/components-temp/CapsuleGlass', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: ({ children }: { children: React.ReactNode }) => (
+      <View testID="capsule">{children}</View>
+    ),
+  };
+});
+
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
+
+jest.mock('../hooks/useCopyTokenContractAddress', () => ({
+  useCopyTokenContractAddress: () => mockCopyContractAddress,
+}));
+
+jest.mock('../../AssetOverview/utils/getTokenDetails', () => ({
+  resolveTokenContractAddress: (...args: unknown[]) =>
+    mockResolveTokenContractAddress(...args),
+}));
+
+jest.mock('../../../../util/address', () => ({
+  formatAddress: jest.fn((address: string) => `${address.slice(0, 7)}...short`),
+}));
+
+jest.mock('../../Bridge/hooks/useRWAToken', () => ({
+  useRWAToken: () => ({
+    isStockToken: mockIsStockToken,
+  }),
+}));
+
+jest.mock('../../shared/StockBadge/StockBadge', () => {
+  const { Text } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: () => <Text testID="stock-badge">Stock</Text>,
+  };
+});
+
+jest.mock('../../Assets/components/AssetLogo/AssetLogo', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('../../AssetOverview/Balance/Balance', () => ({
+  NetworkBadgeSource: jest.fn(),
+}));
+
+const mockToken: TokenDetailsRouteParams = {
+  address: '0x123',
+  chainId: '0x1',
+  symbol: 'ETH',
+  name: 'Ethereum',
+  ticker: 'ETH',
+  isETH: true,
+} as unknown as TokenDetailsRouteParams;
+
+/** Caller-provided title accessory, as the meme page passes its age chip. */
+const ageChipOverride = <Text testID="age-chip">3d</Text>;
+
+const createMockSecurityData = (
+  resultType: TokenSecurityData['resultType'],
+): TokenSecurityData => ({
+  resultType,
+  maliciousScore: '0',
+  fees: {
+    transfer: 0,
+    transferFeeMaxAmount: null,
+    buy: 0,
+    sell: 0,
+  },
+  features: [],
+  financialStats: {
+    supply: 1000000,
+    topHolders: [],
+    holdersCount: 100,
+    tradeVolume24h: null,
+    lockedLiquidityPct: null,
+    markets: [],
+  },
+  metadata: {
+    externalLinks: {
+      homepage: null,
+      twitterPage: null,
+      telegramChannelId: null,
+    },
+  },
+  created: '2023-01-01T00:00:00Z',
+});
+
+describe('TokenDetailsInlineHeader', () => {
+  const mockOnBackPress = jest.fn();
+
+  const renderHeader = (
+    props: Partial<React.ComponentProps<typeof TokenDetailsInlineHeader>> = {},
+  ) =>
+    render(
+      <TokenDetailsInlineHeader
+        token={mockToken}
+        securityData={undefined}
+        onBackPress={mockOnBackPress}
+        {...props}
+      />,
+    );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIsStockToken.mockReturnValue(false);
+    mockResolveTokenContractAddress.mockReturnValue(
+      '0x0000000000000000000000000000000000000000',
+    );
+  });
+
+  describe('security badge', () => {
+    it('renders verified badge when securityData resultType is Verified', () => {
+      const { getByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+      });
+
+      expect(getByTestId('security-badge-verified')).toBeOnTheScreen();
+    });
+
+    it('does not render verified badge when securityData resultType is Benign', () => {
+      const { queryByTestId } = renderHeader({
+        securityData: createMockSecurityData('Benign'),
+      });
+
+      expect(queryByTestId('security-badge-verified')).toBeNull();
+    });
+
+    it('navigates to security badge bottom sheet when verified badge is pressed', () => {
+      const { getByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+      });
+
+      fireEvent.press(getByTestId('security-badge-verified'));
+
+      expect(mockNavigate).toHaveBeenCalledWith(Routes.MODAL.ROOT_MODAL_FLOW, {
+        screen: Routes.MODAL.SECURITY_BADGE_BOTTOM_SHEET,
+        params: expect.objectContaining({
+          source: 'badge',
+          severity: 'Verified',
+          tokenAddress: '0x123',
+          tokenSymbol: 'ETH',
+          chainId: '0x1',
+        }),
+      });
+    });
+
+    it('forwards tdpVersion "v3" into the security badge bottom sheet params', () => {
+      const { getByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+        tdpVersion: 'v3',
+      });
+
+      fireEvent.press(getByTestId('security-badge-verified'));
+
+      expect(mockNavigate).toHaveBeenCalledWith(Routes.MODAL.ROOT_MODAL_FLOW, {
+        screen: Routes.MODAL.SECURITY_BADGE_BOTTOM_SHEET,
+        params: expect.objectContaining({ tdpVersion: 'v3' }),
+      });
+    });
+
+    it('defaults tdpVersion to "v2" when no prop is provided', () => {
+      const { getByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+      });
+
+      fireEvent.press(getByTestId('security-badge-verified'));
+
+      expect(mockNavigate).toHaveBeenCalledWith(Routes.MODAL.ROOT_MODAL_FLOW, {
+        screen: Routes.MODAL.SECURITY_BADGE_BOTTOM_SHEET,
+        params: expect.objectContaining({ tdpVersion: 'v2' }),
+      });
+    });
+  });
+
+  describe('titleEndAccessory override', () => {
+    it('renders the provided accessory in place of the default badges', () => {
+      const { getByTestId, queryByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+        titleEndAccessory: ageChipOverride,
+      });
+
+      expect(getByTestId('age-chip')).toBeOnTheScreen();
+      expect(queryByTestId('security-badge-verified')).toBeNull();
+    });
+
+    it('suppresses the stock badge when an override is provided', () => {
+      mockIsStockToken.mockReturnValue(true);
+      const { queryByTestId } = renderHeader({
+        token: {
+          ...mockToken,
+          name: 'Apple Inc',
+          ticker: 'AAPL',
+          symbol: 'AAPL',
+        },
+        titleEndAccessory: ageChipOverride,
+      });
+
+      expect(queryByTestId('stock-badge')).toBeNull();
+    });
+
+    it('renders the default badges when no override is provided', () => {
+      mockIsStockToken.mockReturnValue(true);
+      const { getByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+        token: {
+          ...mockToken,
+          name: 'Apple Inc',
+          ticker: 'AAPL',
+          symbol: 'AAPL',
+        },
+      });
+
+      expect(getByTestId('security-badge-verified')).toBeOnTheScreen();
+      expect(getByTestId('stock-badge')).toBeOnTheScreen();
+    });
+  });
+
+  describe('stock badge', () => {
+    it('renders stock badge for named stock tokens', () => {
+      mockIsStockToken.mockReturnValue(true);
+
+      const { getByTestId } = renderHeader({
+        token: {
+          ...mockToken,
+          name: 'Apple Inc',
+          ticker: 'AAPL',
+          symbol: 'AAPL',
+        },
+      });
+
+      expect(getByTestId('stock-badge')).toBeOnTheScreen();
+    });
+
+    it('renders stock badge for symbol-only stock tokens', () => {
+      mockIsStockToken.mockReturnValue(true);
+
+      const { getByTestId } = renderHeader({
+        token: {
+          ...mockToken,
+          name: '',
+          ticker: 'AAPL',
+          symbol: 'AAPL',
+        },
+      });
+
+      expect(getByTestId('stock-badge')).toBeOnTheScreen();
+    });
+
+    it('does not render stock badge when token is not a stock token', () => {
+      mockIsStockToken.mockReturnValue(false);
+
+      const { queryByTestId } = renderHeader();
+
+      expect(queryByTestId('stock-badge')).toBeNull();
+    });
+
+    it('renders both verified and stock badges when applicable', () => {
+      mockIsStockToken.mockReturnValue(true);
+
+      const { getByTestId } = renderHeader({
+        securityData: createMockSecurityData('Verified'),
+        token: {
+          ...mockToken,
+          name: 'Apple Inc',
+          ticker: 'AAPL',
+          symbol: 'AAPL',
+        },
+      });
+
+      expect(getByTestId('security-badge-verified')).toBeOnTheScreen();
+      expect(getByTestId('stock-badge')).toBeOnTheScreen();
+    });
+  });
+
+  describe('back button and header actions', () => {
+    it('renders back button with neutral icon', () => {
+      const { getByTestId } = renderHeader();
+
+      expect(getByTestId('back-arrow-button')).toBeOnTheScreen();
+    });
+
+    it('calls onBackPress when back button is pressed', () => {
+      const { getByTestId } = renderHeader();
+
+      fireEvent.press(getByTestId('back-arrow-button'));
+
+      expect(mockOnBackPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders asset ticker as title', () => {
+      const { getByText, queryByText } = renderHeader();
+
+      expect(getByText('ETH')).toBeOnTheScreen();
+      expect(queryByText('Ethereum')).toBeNull();
+    });
+
+    it('does not render description or copy button for native tokens', () => {
+      const { queryByTestId, queryByText } = renderHeader();
+
+      expect(queryByTestId('copy-contract-address-button')).toBeNull();
+      expect(queryByText('0x00000...short')).toBeNull();
+    });
+
+    it('replaces the contract address when a description is provided', () => {
+      const { Text } = jest.requireActual('react-native');
+      const { getByText, queryByText, queryByTestId } = renderHeader({
+        token: {
+          ...mockToken,
+          isETH: false,
+          isNative: false,
+        },
+        description: <Text>$0.000012</Text>,
+      });
+
+      expect(getByText('$0.000012')).toBeOnTheScreen();
+      expect(queryByText('0x00000...short')).toBeNull();
+      expect(queryByTestId('copy-contract-address-button')).toBeNull();
+    });
+
+    it('renders short contract address in description for non-native tokens', () => {
+      const { getByText } = renderHeader({
+        token: {
+          ...mockToken,
+          isETH: false,
+          isNative: false,
+        },
+      });
+
+      expect(getByText('0x00000...short')).toBeOnTheScreen();
+    });
+
+    it('renders copy button and calls onCopyAddress when pressed for non-native tokens', () => {
+      const mockOnCopyAddress = jest.fn();
+      const { getByTestId } = renderHeader({
+        token: {
+          ...mockToken,
+          isETH: false,
+          isNative: false,
+        },
+        onCopyAddress: mockOnCopyAddress,
+      });
+
+      fireEvent.press(getByTestId('copy-contract-address-button'));
+
+      expect(mockCopyContractAddress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render description or copy button when contract address is null', () => {
+      mockResolveTokenContractAddress.mockReturnValue(null);
+      const { queryByTestId, queryByText } = renderHeader();
+
+      expect(queryByTestId('copy-contract-address-button')).toBeNull();
+      expect(queryByText('0x00000...short')).toBeNull();
+    });
+
+    it('renders price alert button when onPriceAlertPress is provided', () => {
+      const mockOnPriceAlertPress = jest.fn();
+      const { getByTestId } = renderHeader({
+        onPriceAlertPress: mockOnPriceAlertPress,
+      });
+
+      fireEvent.press(getByTestId('token-price-alert-button'));
+      expect(mockOnPriceAlertPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render the price alert button when onPriceAlertPress is undefined', () => {
+      const { queryByTestId } = renderHeader();
+
+      expect(queryByTestId('token-price-alert-button')).toBeNull();
+    });
+
+    it('renders share button and calls onSharePress when pressed', () => {
+      const mockOnSharePress = jest.fn();
+      const { getByTestId } = renderHeader({
+        onSharePress: mockOnSharePress,
+      });
+
+      fireEvent.press(getByTestId('share-button'));
+      expect(mockOnSharePress).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render the share button when onSharePress is undefined', () => {
+      const { queryByTestId } = renderHeader();
+
+      expect(queryByTestId('share-button')).toBeNull();
+    });
+
+    it('renders end-accessory icons left-to-right as watchlist, price alert, then share', () => {
+      const { Text } = jest.requireActual('react-native');
+      const { toJSON, getByTestId } = renderHeader({
+        starButton: <Text testID="watchlist-star-button">★</Text>,
+        onPriceAlertPress: jest.fn(),
+        onSharePress: jest.fn(),
+      });
+
+      expect(getByTestId('watchlist-star-button')).toBeOnTheScreen();
+      expect(getByTestId('token-price-alert-button')).toBeOnTheScreen();
+      expect(getByTestId('share-button')).toBeOnTheScreen();
+
+      const serialized = JSON.stringify(toJSON());
+      const starIndex = serialized.indexOf('watchlist-star-button');
+      const alertIndex = serialized.indexOf('token-price-alert-button');
+      const shareIndex = serialized.indexOf('share-button');
+
+      expect(starIndex).toBeGreaterThanOrEqual(0);
+      expect(alertIndex).toBeGreaterThan(starIndex);
+      expect(shareIndex).toBeGreaterThan(alertIndex);
+    });
+  });
+
+  describe('glass', () => {
+    it('stays in place with plain buttons by default', () => {
+      const { queryByTestId } = renderHeader({ onSharePress: jest.fn() });
+
+      expect(queryByTestId(FLOATING_HEADER_FADE_TEST_ID)).toBeNull();
+      expect(queryByTestId('capsule')).toBeNull();
+    });
+
+    it('floats on its backdrop with the back button in a capsule', () => {
+      const { getAllByTestId, getByTestId } = renderHeader({ isGlass: true });
+
+      expect(getByTestId(FLOATING_HEADER_FADE_TEST_ID)).toBeOnTheScreen();
+      expect(
+        within(getAllByTestId('capsule')[0]).getByTestId('back-arrow-button'),
+      ).toBeOnTheScreen();
+
+      fireEvent.press(getByTestId('back-arrow-button'));
+
+      expect(mockOnBackPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('groups the watchlist, price alert and share buttons in one capsule', () => {
+      const { Text } = jest.requireActual('react-native');
+      const { getAllByTestId } = renderHeader({
+        isGlass: true,
+        starButton: <Text testID="watchlist-star-button">★</Text>,
+        onPriceAlertPress: jest.fn(),
+        onSharePress: jest.fn(),
+      });
+
+      const [, actions] = getAllByTestId('capsule');
+      expect(within(actions).getByTestId('watchlist-star-button')).toBeTruthy();
+      expect(
+        within(actions).getByTestId('token-price-alert-button'),
+      ).toBeTruthy();
+      expect(within(actions).getByTestId('share-button')).toBeTruthy();
+    });
+
+    it('reports the floating header layout so the page can inset its content', () => {
+      const onLayout = jest.fn();
+      const { getByTestId } = renderHeader({ isGlass: true, onLayout });
+      const event = { nativeEvent: { layout: { height: 120 } } };
+
+      fireEvent(getByTestId('back-arrow-button'), 'layout', event);
+
+      expect(onLayout).toHaveBeenCalledWith(event);
+    });
+  });
+});

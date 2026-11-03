@@ -1,0 +1,28 @@
+{
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.preferences.importModuleSpecifier": "relative",
+  // Tailwind CSS configuration
+  "tailwindCSS.includeLanguages": {
+    "javascript": "javascript",
+    "typescript": "typescript",
+    "typescriptreact": "typescriptreact"
+  },
+  "tailwindCSS.classAttributes": ["twClassName", "style"],
+  "tailwindCSS.experimental.classRegex": [
+    ["tw`([^`]*)`", "$1"],
+    ["tw\\('([^']*)'\\)", "$1"],
+    ["tw\\(\"([^\"]*)\"\\)", "$1"]
+  ],
+  "tailwindCSS.emmetCompletions": true,
+  "tailwindCSS.validate": true,
+  "tailwindCSS.showPixelEquivalents": true,
+  "tailwindCSS.colorDecorators": true,
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "editor.inlayHints.enabled": "on",
+  "sonarlint.connectedMode.project": {
+    "connectionId": "metamask",
+    "projectKey": "MetaMask_metamask-mobile"
+  }
+}

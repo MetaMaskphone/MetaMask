@@ -1,0 +1,101 @@
+import React, { useCallback, useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { AppNavigationProp } from '../../../core/NavigationService/types';
+import Engine from '../../../core/Engine';
+import { normalizeReplacementGasFeeParams } from '../../../util/confirmation/gas';
+import LedgerConfirmationModal from './LedgerConfirmationModal';
+import {
+  createNavigationDetails,
+  useParams,
+} from '../../../util/navigation/navUtils';
+import Routes from '../../../constants/navigation/Routes';
+import { speedUpTransaction } from '../../../util/transaction-controller';
+
+export const createLedgerTransactionModalNavDetails =
+  createNavigationDetails<LedgerTransactionModalParams>(
+    Routes.LEDGER_TRANSACTION_MODAL,
+  );
+
+export enum LedgerReplacementTxTypes {
+  SPEED_UP = 'speedUp',
+  CANCEL = 'cancel',
+}
+
+export interface ReplacementTxParams {
+  type: LedgerReplacementTxTypes;
+  eip1559GasFee?: {
+    maxFeePerGas?: string;
+    maxPriorityFeePerGas?: string;
+  };
+  legacyGasFee?: {
+    gasPrice?: string;
+  };
+}
+
+export interface LedgerTransactionModalParams {
+  onConfirmationComplete: (confirmed: boolean) => void;
+  transactionId: string;
+  deviceId: string;
+  replacementParams?: ReplacementTxParams;
+}
+
+const LedgerTransactionModal = () => {
+  const navigation = useNavigation<AppNavigationProp>();
+  // TODO: Replace "any" with type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { TransactionController, ApprovalController } = Engine.context as any;
+
+  const { transactionId, onConfirmationComplete, deviceId, replacementParams } =
+    useParams<LedgerTransactionModalParams>();
+
+  const hasNavigatedRef = useRef(false);
+  const goBack = useCallback(() => {
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation]);
+
+  const executeOnLedger = useCallback(async () => {
+    const gasFeeParams = normalizeReplacementGasFeeParams(replacementParams);
+
+    if (replacementParams?.type === LedgerReplacementTxTypes.SPEED_UP) {
+      await speedUpTransaction(transactionId, gasFeeParams);
+    } else if (replacementParams?.type === LedgerReplacementTxTypes.CANCEL) {
+      await TransactionController.stopTransaction(transactionId, gasFeeParams);
+    } else {
+      // This requires the user to confirm on the ledger device
+      await ApprovalController.acceptRequest(transactionId, undefined, {
+        waitForResult: true,
+      });
+    }
+
+    onConfirmationComplete(true);
+    goBack();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onConfirmationComplete, goBack]);
+
+  const onRejection = useCallback(() => {
+    try {
+      Engine.rejectPendingApproval(
+        transactionId,
+        new Error('User rejected the transaction'),
+      );
+    } catch {
+      // no-op: approval may already be consumed
+    }
+    onConfirmationComplete(false);
+    goBack();
+  }, [transactionId, onConfirmationComplete, goBack]);
+
+  return (
+    <LedgerConfirmationModal
+      onConfirmation={executeOnLedger}
+      onRejection={onRejection}
+      deviceId={deviceId}
+    />
+  );
+};
+
+export default React.memo(LedgerTransactionModal);

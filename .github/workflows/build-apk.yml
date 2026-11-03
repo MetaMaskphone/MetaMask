@@ -1,0 +1,234 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build metamask.apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    env:
+      ORG_GRADLE_PROJECT_reactNativeArchitectures: arm64-v8a,x86_64
+
+      ANDROID_SIGNING_KEYSTORE_PASSWORD: android
+      BITRISEIO_ANDROID_MAIN_KEYSTORE_ALIAS: androiddebugkey
+      BITRISEIO_ANDROID_MAIN_KEYSTORE_PRIVATE_KEY_PASSWORD: android
+
+      MM_SRP_BACKUP_API_URL: http://192.168.0.101:8000
+
+      MM_FOX_CODE: EXAMPLE_FOX_CODE
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+
+      MM_INFURA_PROJECT_ID: ${{ secrets.MM_INFURA_PROJECT_ID || '0123456789abcdef0123456789abcdef' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle.properties', 'android/build.gradle', 'android/app/build.gradle', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build inpage bridge
+        run: bash scripts/build-inpage-bridge.sh
+
+      - name: Provide google-services.json
+        env:
+          REAL_GOOGLE_SERVICES_B64: ${{ secrets.GOOGLE_SERVICES_B64_ANDROID }}
+        run: |
+          if [ -n "${REAL_GOOGLE_SERVICES_B64:-}" ]; then
+            echo "使用仓库 secret 里的 Firebase 配置"
+            echo "GOOGLE_SERVICES_B64_ANDROID=${REAL_GOOGLE_SERVICES_B64}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "::warning::没有配置 GOOGLE_SERVICES_B64_ANDROID，使用占位配置（推送/分析不可用）"
+          cat > /tmp/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "123456789012",
+              "project_id": "metamask-test-local",
+              "storage_bucket": "metamask-test-local.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789012:android:0123456789abcdef",
+                  "android_client_info": {
+                    "package_name": "io.metamask"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  { "current_key": "AIzaSyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" }
+                ],
+                "services": {
+                  "appinvite_service": { "other_platform_oauth_client": [] }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
+
+          echo "GOOGLE_SERVICES_B64_ANDROID=$(base64 -w0 /tmp/google-services.json)" >> "$GITHUB_ENV"
+
+      - name: Prepare production signing (unused on the dev path)
+        if: false
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/keystores/release.keystore \
+            -alias srpbackup \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass testpassword -keypass testpassword \
+            -dname "CN=SRP Backup Test, OU=QA, O=Local, L=Local, S=Local, C=US"
+
+          cat > sentry.release.properties <<'PROPS'
+          defaults.url=https://sentry.io/
+          defaults.org=metamask
+          defaults.project=metamask-mobile
+          auth.token=0000000000000000000000000000000000000000
+          PROPS
+          echo "--- sentry.release.properties ---"
+          cat sentry.release.properties
+
+      - name: Tune gradle for a fast build
+        run: |
+          sed -i 's/def enableProguardInReleaseBuilds = true/def enableProguardInReleaseBuilds = false/' android/app/build.gradle
+          echo "--- app/build.gradle ---"
+          grep -n 'enableProguardInReleaseBuilds' android/app/build.gradle
+
+          {
+            echo ''
+            echo 'org.gradle.caching=true'
+            echo 'android.enablePngCrunchInReleaseBuilds=false'
+
+            echo 'org.gradle.parallel=false'
+            echo 'org.gradle.workers.max=1'
+            echo 'org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g'
+          } >> android/gradle.properties
+          echo "--- gradle.properties (tail) ---"
+          tail -6 android/gradle.properties
+
+          sed -i 's|// hermesFlags = \["-O", "-output-source-map"\]|hermesFlags = ["-output-source-map"]|' android/app/build.gradle
+          echo "--- hermesFlags ---"
+          grep -n 'hermesFlags' android/app/build.gradle
+
+      - name: Build APK
+        run: |
+          echo "--- 机器信息 ---"
+          nproc
+          free -h || true
+          df -h /home/runner | tail -1
+          set +e
+          yarn build:android:main:dev > /tmp/build.log 2>&1
+          code=$?
+          echo "$code" > /tmp/build.exit
+          echo "gradle 退出码: $code"
+          tail -40 /tmp/build.log
+          free -h || true
+
+      - name: Surface build errors
+        if: always()
+        run: |
+          log=/tmp/build.log
+          code=$(cat /tmp/build.exit 2>/dev/null || echo missing)
+          echo "::notice::gradle exit code: $code"
+
+          if [ ! -f "$log" ]; then
+            echo "::error::没有拿到构建日志（/tmp/build.log 不存在），退出码 $code"
+            exit 1
+          fi
+
+          summary=$(awk '/^FAILURE: Build failed/{flag=1} flag{print} /^\* Try:/{flag=0}' "$log" | head -8)
+          if [ -z "$summary" ]; then
+            summary=$(grep -n -E "^e: |error:|FAILED|Caused by|OutOfMemory|heap space|SIGTERM|Killed" "$log" | head -8)
+          fi
+
+          hermes=$(grep -n -i -E 'hermesc|hermes|SyntaxError|Unsupported|stack overflow|out of memory' "$log" | grep -v '^.*hermes-android' | head -10)
+
+          echo "===== 错误摘要 ====="
+          echo "$summary"
+          echo "===== hermes 相关 ====="
+          echo "$hermes"
+          echo "===== 末尾 30 行 ====="
+          tail -30 "$log"
+
+          {
+            echo "$summary"
+            echo "$hermes"
+          } | while IFS= read -r line; do
+            [ -n "$line" ] || continue
+            line="${line//'%'/'%25'}"
+            line="${line//$'\r'/}"
+            echo "::error::${line:0:800}"
+          done
+
+          if [ "$code" != "0" ]; then exit 1; fi
+
+      - name: Rename APK to metamask.apk
+        run: |
+          apk=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
+          if [ -z "$apk" ]; then
+            echo "::error::没找到构建产物 APK"
+            exit 1
+          fi
+          echo "源文件: $apk"
+          cp "$apk" metamask.apk
+          ls -lh metamask.apk
+
+      - name: Upload APK (Actions artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: metamask.apk
+          path: metamask.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish to Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/MetaMask/metamask-mobile/releases/latest --jq .body > /tmp/release-notes.md 2>/dev/null \
+            || printf '\n' > /tmp/release-notes.md
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest metamask.apk --clobber
+            gh release edit latest --notes-file /tmp/release-notes.md
+          else
+            gh release create latest \
+              --title "metamask.apk" \
+              --notes-file /tmp/release-notes.md \
+              metamask.apk
+          fi
+          gh release view latest --json tagName,assets \
+            --jq '"release=" + .tagName + " assets=" + ([.assets[].name] | join(","))'

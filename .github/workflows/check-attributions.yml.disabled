@@ -1,0 +1,26 @@
+name: Check Attributions
+
+on:
+  push:
+    branches: release/*
+
+jobs:
+  check-attributions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - name: Install dependencies from cache with retry
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 #v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: yarn --immutable
+      - name: Check attributions changes
+        run: yarn test:attribution-check

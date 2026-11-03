@@ -1,0 +1,242 @@
+import React, { useState, useEffect } from 'react';
+import { ScrollView, BackHandler, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import PropTypes from 'prop-types';
+import { useTailwind } from '@metamask/design-system-twrnc-preset';
+import {
+  Box,
+  BoxAlignItems,
+  ButtonSize,
+  Text,
+  TextVariant,
+  TextColor,
+} from '@metamask/design-system-react-native';
+import FooterGlass from '../../../component-library/components-temp/FooterGlass';
+import { strings } from '../../../../locales/i18n';
+// eslint-disable-next-line import-x/no-restricted-paths -- TODO(ADR-0020): route-isolation backlog
+import AndroidBackHandler from '../AndroidBackHandler';
+import Device from '../../../util/device';
+import Engine from '../../../core/Engine';
+import { connect } from 'react-redux';
+import { saveOnboardingEvent as saveEvent } from '../../../actions/onboarding';
+import { MetaMetricsEvents } from '../../../core/Analytics';
+import { useTheme } from '../../../util/theme';
+// eslint-disable-next-line import-x/no-restricted-paths -- TODO(ADR-0020): route-isolation backlog
+import { ManualBackUpStepsSelectorsIDs } from '../ManualBackupStep1/ManualBackUpSteps.testIds';
+import trackOnboarding from '../../../util/metrics/TrackOnboarding/trackOnboarding';
+import Routes from '../../../constants/navigation/Routes';
+import { AnalyticsEventBuilder } from '../../../util/analytics/AnalyticsEventBuilder';
+import SRPDesignLight from '../../../images/secure_wallet_light.png';
+import SRPDesignDark from '../../../images/secure_wallet_dark.png';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useAnalytics } from '../../hooks/useAnalytics/useAnalytics';
+import {
+  AccountType,
+  ONBOARDING_SUCCESS_FLOW,
+} from '../../../constants/onboarding';
+import { TraceName, endTrace } from '../../../util/trace';
+import { AppThemeKey } from '../../../util/theme/models';
+import { OnboardingScreenIds } from '../../../hooks/performance/onboardingPerformanceIds';
+import { useScreenPerformance } from '../../../hooks/performance/useScreenPerformance';
+
+const AccountBackupStep1 = (props) => {
+  const [hasFunds, setHasFunds] = useState(false);
+  const { themeAppearance } = useTheme();
+  const { isEnabled: isAnalyticsEnabled } = useAnalytics();
+  const tw = useTailwind();
+
+  useScreenPerformance({
+    screenId: OnboardingScreenIds.ACCOUNT_BACKUP,
+    contentReady: true,
+    isEmpty: false,
+  });
+
+  const track = (event, properties) => {
+    const eventBuilder = AnalyticsEventBuilder.createEventBuilder(event);
+    eventBuilder.addProperties(properties);
+    trackOnboarding(eventBuilder.build(), props.saveOnboardingEvent);
+  };
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (Engine.hasFunds()) setHasFunds(true);
+
+    const hardwareBackPress = () => true;
+    const backHandlerSubscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      hardwareBackPress,
+    );
+
+    return () => {
+      backHandlerSubscription.remove();
+    };
+  }, []);
+
+  const goNext = () => {
+    navigation.navigate('ManualBackupStep1', {
+      ...props.route.params,
+    });
+    track(MetaMetricsEvents.WALLET_SECURITY_STARTED);
+  };
+
+  const skip = async () => {
+    track(MetaMetricsEvents.WALLET_SECURITY_SKIP_CONFIRMED);
+    const resetAction = CommonActions.reset({
+      index: 1,
+      routes: [
+        {
+          name: Routes.ONBOARDING.SUCCESS_FLOW,
+          params: {
+            screen: Routes.ONBOARDING.SUCCESS,
+            params: {
+              ...props.route.params,
+              successFlow: ONBOARDING_SUCCESS_FLOW.NO_BACKED_UP_SRP,
+            },
+          },
+        },
+      ],
+    });
+    endTrace({ name: TraceName.OnboardingNewSrpCreateWallet });
+    endTrace({ name: TraceName.OnboardingJourneyOverall });
+
+    if (isAnalyticsEnabled()) {
+      navigation.dispatch(resetAction);
+    } else {
+      navigation.navigate('OptinMetrics', {
+        onContinue: () => {
+          navigation.dispatch(resetAction);
+        },
+        accountType: AccountType.Metamask,
+      });
+    }
+  };
+
+  const showRemindLater = () => {
+    if (hasFunds) return;
+
+    navigation.navigate(Routes.MODAL.ROOT_MODAL_FLOW, {
+      screen: Routes.SHEET.SKIP_ACCOUNT_SECURITY_MODAL,
+      params: {
+        onConfirm: skip,
+        onCancel: () => {
+          track(MetaMetricsEvents.WALLET_SECURITY_SKIP_CANCELED);
+          goNext();
+        },
+      },
+    });
+    track(MetaMetricsEvents.WALLET_SECURITY_SKIP_INITIATED);
+  };
+
+  const showWhatIsSeedphrase = () => {
+    track(MetaMetricsEvents.SRP_DEFINITION_CLICKED, {
+      location: 'account_backup_step_1',
+    });
+    navigation.navigate(Routes.MODAL.ROOT_MODAL_FLOW, {
+      screen: Routes.SHEET.SEEDPHRASE_MODAL,
+    });
+  };
+
+  return (
+    <SafeAreaView
+      style={tw.style('flex-1 bg-default')}
+      edges={{ top: 'additive', bottom: 'additive' }}
+    >
+      <ScrollView
+        contentContainerStyle={tw.style('flex-grow')}
+        style={tw.style('flex-1 bg-default')}
+        testID={ManualBackUpStepsSelectorsIDs.PROTECT_CONTAINER}
+      >
+        <Box twClassName="flex-1 px-4 pt-2">
+          <Text variant={TextVariant.BodyMd} color={TextColor.TextAlternative}>
+            {strings('manual_backup_step_1.steps', {
+              currentStep: 2,
+              totalSteps: 3,
+            })}
+          </Text>
+          <Box alignItems={BoxAlignItems.Center} twClassName="flex-1 mb-2.5">
+            <Text
+              variant={TextVariant.DisplayMd}
+              color={TextColor.TextDefault}
+              twClassName="text-left self-start mb-4"
+            >
+              {strings('account_backup_step_1.title')}
+            </Text>
+            <Image
+              source={
+                themeAppearance === AppThemeKey.dark
+                  ? SRPDesignDark
+                  : SRPDesignLight
+              }
+              style={tw.style('w-[250px] h-[250px] mx-auto')}
+            />
+            <Text
+              variant={TextVariant.BodyMd}
+              color={TextColor.TextAlternative}
+              twClassName="mt-8 self-start"
+            >
+              {strings('account_backup_step_1.info_text_1_1')}{' '}
+              <Text
+                variant={TextVariant.BodyMd}
+                color={TextColor.PrimaryDefault}
+                onPress={showWhatIsSeedphrase}
+                testID={ManualBackUpStepsSelectorsIDs.SEEDPHRASE_LINK}
+              >
+                {strings('account_backup_step_1.info_text_1_2')}
+              </Text>{' '}
+              {strings('account_backup_step_1.info_text_1_3')}{' '}
+            </Text>
+
+            <Text
+              variant={TextVariant.BodyMd}
+              color={TextColor.TextAlternative}
+              twClassName="self-start mt-4"
+            >
+              {strings('account_backup_step_1.info_text_1_4')}
+            </Text>
+          </Box>
+
+          <FooterGlass
+            twClassName="px-0 mt-auto justify-end py-2"
+            primaryButtonProps={{
+              children: strings('account_backup_step_1.cta_text'),
+              onPress: goNext,
+              size: ButtonSize.Lg,
+            }}
+            secondaryButtonProps={
+              !hasFunds
+                ? {
+                    children: strings('account_backup_step_1.remind_me_later'),
+                    onPress: showRemindLater,
+                    size: ButtonSize.Lg,
+                    testID:
+                      ManualBackUpStepsSelectorsIDs.REMIND_ME_LATER_BUTTON,
+                  }
+                : undefined
+            }
+          />
+        </Box>
+      </ScrollView>
+      {Device.isAndroid() && (
+        <AndroidBackHandler customBackPress={showRemindLater} />
+      )}
+    </SafeAreaView>
+  );
+};
+
+const mapDispatchToProps = (dispatch) => ({
+  saveOnboardingEvent: (...eventArgs) => dispatch(saveEvent(eventArgs)),
+});
+
+AccountBackupStep1.propTypes = {
+  /**
+   * Object that represents the current route info like params passed to it.
+   */
+  route: PropTypes.object,
+  /**
+   * Action to save onboarding event.
+   */
+  saveOnboardingEvent: PropTypes.func,
+};
+
+export default connect(null, mapDispatchToProps)(AccountBackupStep1);

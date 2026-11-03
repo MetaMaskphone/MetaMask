@@ -1,0 +1,323 @@
+import React, { Fragment, useCallback, useEffect, useState } from 'react';
+import Engine from '../../../core/Engine';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { strings } from '../../../../locales/i18n';
+import AnimatedQRCode from './AnimatedQRCode';
+import AnimatedQRScannerModal from './AnimatedQRScanner';
+import { fontStyles } from '../../../styles/common';
+import AccountInfoCard from '../AccountInfoCard';
+import ActionView from '../ActionView';
+import { UR } from '@ngraveio/bc-ur';
+import { ETHSignature } from '@keystonehq/bc-ur-registry-eth';
+import { stringify as uuidStringify } from 'uuid';
+import Alert, { AlertType } from '../../Base/Alert';
+import { MetaMetricsEvents } from '../../../core/Analytics';
+
+import { useNavigation } from '@react-navigation/native';
+import type { AppNavigationProp } from '../../../core/NavigationService/types';
+import { useTheme } from '../../../util/theme';
+import { useAnalytics } from '../../../components/hooks/useAnalytics/useAnalytics';
+import { QrScanRequest, QrScanRequestType } from '@metamask/eth-qr-keyring';
+import { useQrScanErrorForwarding } from '../../../core/HardwareWallet/hooks/useQrScanErrorForwarding';
+import { useHardwareWallet } from '../../../core/HardwareWallet/contexts';
+
+interface IQRSigningDetails {
+  pendingScanRequest: QrScanRequest;
+  successCallback?: () => void;
+  failureCallback?: (error: string) => void;
+  cancelCallback?: () => void;
+  confirmButtonMode?: 'normal' | 'sign' | 'confirm';
+  showCancelButton?: boolean;
+  tighten?: boolean;
+  showHint?: boolean;
+  shouldStartAnimated?: boolean;
+  fromAddress: string;
+}
+
+// TODO: Replace "any" with type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    wrapper: {
+      flex: 1,
+    },
+    container: {
+      flex: 1,
+      width: '100%',
+      flexDirection: 'column',
+      alignItems: 'center',
+      backgroundColor: colors.background.default,
+    },
+    accountInfoCardWrapper: {
+      paddingHorizontal: 24,
+      paddingBottom: 12,
+    },
+    containerTighten: {
+      paddingHorizontal: 8,
+    },
+    title: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 54,
+      marginBottom: 30,
+    },
+    titleTighten: {
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    titleText: {
+      ...fontStyles.normal,
+      fontSize: 14,
+      color: colors.text.default,
+    },
+    description: {
+      marginVertical: 24,
+      alignItems: 'center',
+      ...fontStyles.normal,
+      fontSize: 14,
+    },
+    descriptionTighten: {
+      marginVertical: 12,
+    },
+    padding: {
+      height: 40,
+    },
+    descriptionText: {
+      ...fontStyles.normal,
+      fontSize: 14,
+      color: colors.text.default,
+    },
+    descriptionTextTighten: {
+      fontSize: 12,
+    },
+    errorText: {
+      ...fontStyles.normal,
+      fontSize: 12,
+      color: colors.error.default,
+    },
+    alert: {
+      marginHorizontal: 16,
+      marginTop: 12,
+    },
+  });
+
+const QRSigningDetails = ({
+  pendingScanRequest,
+  successCallback,
+  failureCallback,
+  cancelCallback,
+  confirmButtonMode = 'confirm',
+  showCancelButton = false,
+  tighten = false,
+  showHint = true,
+  shouldStartAnimated = true,
+  fromAddress,
+}: IQRSigningDetails) => {
+  const { colors } = useTheme();
+  const { trackEvent, createEventBuilder } = useAnalytics();
+  const { setQrScanRetryHandler } = useHardwareWallet();
+  const styles = createStyles(colors);
+  const navigation = useNavigation<AppNavigationProp>();
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [shouldPause, setShouldPause] = useState(false);
+
+  const [hasSentOrCanceled, setSentOrCanceled] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (hasSentOrCanceled) {
+        return;
+      }
+      e.preventDefault();
+      if (pendingScanRequest) {
+        Engine.getQrKeyringScanner().rejectPendingScan(
+          new Error('Scan canceled'),
+        );
+      }
+      navigation.dispatch(e.data.action);
+    });
+    return unsubscribe;
+  }, [pendingScanRequest, hasSentOrCanceled, navigation]);
+
+  const resetError = useCallback(() => {
+    setErrorMessage('');
+  }, []);
+
+  const showScanner = useCallback(() => {
+    setScannerVisible(true);
+    resetError();
+  }, [resetError]);
+
+  const hideScanner = useCallback(() => {
+    setScannerVisible(false);
+  }, []);
+  const { onQRHardwareScanError, handleScannerModalHide } =
+    useQrScanErrorForwarding({ hideScanner });
+
+  useEffect(() => {
+    setQrScanRetryHandler?.(() => {
+      showScanner();
+    });
+
+    return () => {
+      setQrScanRetryHandler?.(null);
+    };
+  }, [setQrScanRetryHandler, showScanner]);
+
+  const onCancel = useCallback(async () => {
+    if (pendingScanRequest) {
+      Engine.getQrKeyringScanner().rejectPendingScan(
+        new Error('Scan canceled'),
+      );
+    }
+    setSentOrCanceled(true);
+    hideScanner();
+    cancelCallback?.();
+  }, [pendingScanRequest, hideScanner, cancelCallback]);
+
+  const onScanSuccess = useCallback(
+    (ur: UR) => {
+      hideScanner();
+      const signature = ETHSignature.fromCBOR(ur.cbor);
+      const buffer = signature.getRequestId();
+      if (buffer) {
+        const requestId = uuidStringify(buffer);
+        if (pendingScanRequest?.request?.requestId === requestId) {
+          Engine.getQrKeyringScanner().resolvePendingScan({
+            type: ur.type,
+            cbor: ur.cbor.toString('hex'),
+          });
+          setSentOrCanceled(true);
+          successCallback?.();
+          return;
+        }
+      }
+      trackEvent(
+        createEventBuilder(MetaMetricsEvents.HARDWARE_WALLET_ERROR)
+          .addProperties({
+            error:
+              'received signature request id is not matched with origin request',
+          })
+          .build(),
+      );
+      setErrorMessage(strings('transaction.mismatched_qr_request_id'));
+      failureCallback?.(strings('transaction.mismatched_qr_request_id'));
+    },
+    [
+      pendingScanRequest?.request?.requestId,
+      failureCallback,
+      successCallback,
+      trackEvent,
+      createEventBuilder,
+      hideScanner,
+    ],
+  );
+  const onScanError = useCallback(
+    (_errorMessage: string) => {
+      hideScanner();
+      setErrorMessage(_errorMessage);
+      failureCallback?.(_errorMessage);
+    },
+    [hideScanner, failureCallback],
+  );
+
+  const renderAlert = () =>
+    errorMessage !== '' && (
+      <Alert type={AlertType.Error} onPress={resetError} style={styles.alert}>
+        <Text style={styles.errorText}>{errorMessage}</Text>
+      </Alert>
+    );
+
+  return (
+    <Fragment>
+      {pendingScanRequest?.request && (
+        <ScrollView contentContainerStyle={styles.wrapper}>
+          <ActionView
+            confirmDisabled={false}
+            showCancelButton={showCancelButton}
+            confirmButtonMode={confirmButtonMode}
+            cancelText={strings('transaction.reject')}
+            confirmText={strings('transactions.sign_get_signature')}
+            onCancelPress={onCancel}
+            onConfirmPress={showScanner}
+          >
+            <View
+              style={[
+                styles.container,
+                tighten ? styles.containerTighten : undefined,
+              ]}
+            >
+              <View style={styles.accountInfoCardWrapper}>
+                <AccountInfoCard
+                  showFiatBalance={false}
+                  fromAddress={fromAddress}
+                />
+              </View>
+              {renderAlert()}
+              <View
+                style={[
+                  styles.title,
+                  tighten ? styles.titleTighten : undefined,
+                ]}
+              >
+                <Text style={styles.titleText}>
+                  {strings('transactions.sign_title_scan')}
+                </Text>
+                <Text style={styles.titleText}>
+                  {strings('transactions.sign_title_device')}
+                </Text>
+              </View>
+              <AnimatedQRCode
+                cbor={pendingScanRequest.request.payload.cbor}
+                type={pendingScanRequest.request.payload.type}
+                shouldPause={
+                  scannerVisible || !shouldStartAnimated || shouldPause
+                }
+              />
+              {showHint ? (
+                <View
+                  style={[
+                    styles.description,
+                    tighten ? styles.descriptionTighten : undefined,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.descriptionText,
+                      tighten ? styles.descriptionTextTighten : undefined,
+                    ]}
+                  >
+                    {strings('transactions.sign_description_1')}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.descriptionText,
+                      tighten ? styles.descriptionTextTighten : undefined,
+                    ]}
+                  >
+                    {strings('transactions.sign_description_2')}
+                  </Text>
+                </View>
+              ) : !tighten ? (
+                <View style={styles.padding} />
+              ) : null}
+            </View>
+          </ActionView>
+        </ScrollView>
+      )}
+      <AnimatedQRScannerModal
+        pauseQRCode={setShouldPause}
+        visible={scannerVisible}
+        purpose={QrScanRequestType.SIGN}
+        onScanSuccess={onScanSuccess}
+        onScanError={onScanError}
+        onQRHardwareScanError={onQRHardwareScanError}
+        onModalHideComplete={handleScannerModalHide}
+        hideModal={hideScanner}
+      />
+    </Fragment>
+  );
+};
+
+export default QRSigningDetails;

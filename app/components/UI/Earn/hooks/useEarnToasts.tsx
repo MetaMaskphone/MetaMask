@@ -1,0 +1,291 @@
+import {
+  playNotification,
+  NotificationMoment,
+  type HapticNotificationMoment,
+} from '../../../../util/haptics';
+import React, { useCallback, useContext, useMemo } from 'react';
+import { strings } from '../../../../../locales/i18n';
+import Icon, {
+  IconName,
+  IconSize,
+} from '../../../../component-library/components/Icons/Icon';
+import { ToastContext } from '../../../../component-library/components/Toast';
+import {
+  ButtonIconVariant,
+  ToastOptions,
+  ToastVariants,
+} from '../../../../component-library/components/Toast/Toast.types';
+import { useAppThemeFromContext } from '../../../../util/theme';
+import {
+  Spinner,
+  IconColor,
+  IconSize as ReactNativeDsIconSize,
+  Text,
+  TextColor,
+  TextVariant,
+} from '@metamask/design-system-react-native';
+
+export type EarnToastOptions = Omit<
+  Extract<ToastOptions, { variant: ToastVariants.Icon }>,
+  'labelOptions'
+> & {
+  hapticsType: HapticNotificationMoment;
+  // Overwriting ToastOptions.labelOptions to also support ReactNode since this works.
+  labelOptions?: {
+    label: string | React.ReactNode;
+    isBold?: boolean;
+  }[];
+};
+
+export interface MusdConversionInProgressParams {
+  tokenSymbol: string;
+}
+
+export interface EarnToastOptionsConfig {
+  mUsdConversion: {
+    inProgress: (params: MusdConversionInProgressParams) => EarnToastOptions;
+    success: EarnToastOptions;
+    failed: EarnToastOptions;
+  };
+  bonusClaim: {
+    inProgress: EarnToastOptions;
+    success: EarnToastOptions;
+    failed: EarnToastOptions;
+  };
+  tronWithdrawal: {
+    failed: (errors: string[]) => EarnToastOptions;
+  };
+  earnStrategySelection: {
+    navigationToDeposit: EarnToastOptions;
+  };
+  earnWithdrawal: {
+    detailsUnavailable: EarnToastOptions;
+  };
+}
+
+interface EarnToastLabelOptions {
+  primary: string | React.ReactNode;
+  secondary?: string | React.ReactNode;
+  primaryIsBold?: boolean;
+}
+
+const getEarnToastLabels = ({
+  primary,
+  secondary,
+  primaryIsBold = true,
+}: EarnToastLabelOptions) => {
+  const labels = [
+    {
+      label: primary,
+      isBold: primaryIsBold,
+    },
+  ];
+
+  if (secondary) {
+    labels.push(
+      {
+        label: '\n',
+        isBold: false,
+      },
+      {
+        label: secondary,
+        isBold: false,
+      },
+    );
+  }
+
+  return labels;
+};
+
+const EARN_TOASTS_DEFAULT_OPTIONS: Partial<EarnToastOptions> = {
+  hasNoTimeout: false,
+};
+
+const useEarnToasts = (): {
+  showToast: (config: EarnToastOptions) => void;
+  EarnToastOptions: EarnToastOptionsConfig;
+} => {
+  const { toastRef } = useContext(ToastContext);
+  const theme = useAppThemeFromContext();
+
+  const closeToast = useCallback(() => {
+    toastRef?.current?.closeToast();
+  }, [toastRef]);
+
+  const closeButtonOptions = useMemo(
+    () => ({
+      variant: ButtonIconVariant.Icon,
+      iconName: IconName.Close,
+      onPress: closeToast,
+    }),
+    [closeToast],
+  );
+
+  const earnBaseToastOptions: Record<string, EarnToastOptions> = useMemo(
+    () => ({
+      success: {
+        ...(EARN_TOASTS_DEFAULT_OPTIONS as EarnToastOptions),
+        variant: ToastVariants.Icon,
+        iconName: IconName.Confirmation,
+        iconColor: theme.colors.success.default,
+        hapticsType: NotificationMoment.Success,
+        startAccessory: (
+          <Icon
+            name={IconName.Confirmation}
+            color={theme.colors.success.default}
+            size={IconSize.Lg}
+          />
+        ),
+      },
+      inProgress: {
+        ...(EARN_TOASTS_DEFAULT_OPTIONS as EarnToastOptions),
+        variant: ToastVariants.Icon,
+        iconName: IconName.Loading,
+        hapticsType: NotificationMoment.Warning,
+        hasNoTimeout: true,
+        startAccessory: (
+          <Spinner
+            color={IconColor.IconDefault}
+            spinnerIconProps={{ size: ReactNativeDsIconSize.Lg }}
+          />
+        ),
+      },
+      error: {
+        ...(EARN_TOASTS_DEFAULT_OPTIONS as EarnToastOptions),
+        variant: ToastVariants.Icon,
+        iconName: IconName.CircleX,
+        iconColor: theme.colors.error.default,
+        hapticsType: NotificationMoment.Error,
+        startAccessory: (
+          <Icon
+            name={IconName.CircleX}
+            color={theme.colors.error.default}
+            size={IconSize.Lg}
+          />
+        ),
+      },
+    }),
+    [theme],
+  );
+
+  const showToast = useCallback(
+    (config: EarnToastOptions) => {
+      const { hapticsType, ...toastOptions } = config;
+      toastRef?.current?.showToast(toastOptions as ToastOptions);
+      playNotification(hapticsType);
+    },
+    [toastRef],
+  );
+
+  // Centralized toast options for Earn
+  const EarnToastOptions: EarnToastOptionsConfig = useMemo(
+    () => ({
+      mUsdConversion: {
+        inProgress: ({ tokenSymbol }: MusdConversionInProgressParams) => ({
+          ...earnBaseToastOptions.inProgress,
+          labelOptions: getEarnToastLabels({
+            primary: strings('earn.musd_conversion.toasts.converting', {
+              token: tokenSymbol,
+            }),
+          }),
+          closeButtonOptions,
+        }),
+        success: {
+          ...earnBaseToastOptions.success,
+          labelOptions: getEarnToastLabels({
+            primary: strings('earn.musd_conversion.toasts.delivered'),
+            secondary: (
+              <Text
+                variant={TextVariant.BodySm}
+                color={TextColor.TextAlternative}
+              >
+                {strings('earn.musd_conversion.toasts.delivered_description')}
+              </Text>
+            ),
+          }),
+          closeButtonOptions,
+        },
+        failed: {
+          ...earnBaseToastOptions.error,
+          labelOptions: getEarnToastLabels({
+            primary: strings('earn.musd_conversion.toasts.failed'),
+          }),
+          closeButtonOptions,
+        },
+      },
+      bonusClaim: {
+        inProgress: {
+          ...earnBaseToastOptions.inProgress,
+          labelOptions: getEarnToastLabels({
+            primary: strings('earn.bonus_claim.toasts.claiming'),
+          }),
+          closeButtonOptions,
+        },
+        // Reuse the mUSD conversion success toast as per acceptance criteria
+        success: {
+          ...earnBaseToastOptions.success,
+          labelOptions: getEarnToastLabels({
+            primary: strings('earn.bonus_claim.toasts.delivered'),
+          }),
+          closeButtonOptions,
+        },
+        failed: {
+          ...earnBaseToastOptions.error,
+          labelOptions: getEarnToastLabels({
+            primary: strings('earn.bonus_claim.toasts.failed'),
+          }),
+          closeButtonOptions,
+        },
+      },
+      tronWithdrawal: {
+        failed: (errors: string[]) => ({
+          ...earnBaseToastOptions.error,
+          labelOptions: getEarnToastLabels({
+            primary: strings('stake.tron.unstaked_banner.error'),
+            ...(errors.length > 0 && {
+              secondary: (
+                <Text
+                  variant={TextVariant.BodySm}
+                  color={TextColor.TextAlternative}
+                >
+                  {errors.map((err) => `\u2022 ${err}`).join('\n')}
+                </Text>
+              ),
+            }),
+          }),
+          closeButtonOptions,
+        }),
+      },
+      earnStrategySelection: {
+        navigationToDeposit: {
+          ...earnBaseToastOptions.error,
+          labelOptions: getEarnToastLabels({
+            primary: strings(
+              'earn.strategy_selection.toasts.deposit_navigation.failed',
+            ),
+          }),
+          closeButtonOptions,
+        },
+      },
+      earnWithdrawal: {
+        detailsUnavailable: {
+          ...earnBaseToastOptions.error,
+          labelOptions: getEarnToastLabels({
+            primary: strings('stake.withdrawal_details_unavailable'),
+          }),
+          closeButtonOptions,
+        },
+      },
+    }),
+    [
+      closeButtonOptions,
+      earnBaseToastOptions.error,
+      earnBaseToastOptions.inProgress,
+      earnBaseToastOptions.success,
+    ],
+  );
+
+  return { showToast, EarnToastOptions };
+};
+
+export default useEarnToasts;

@@ -1,0 +1,534 @@
+{
+  "images" : [
+    {
+      "filename" : "40_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "20x20"
+    },
+    {
+      "filename" : "60_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "20x20"
+    },
+    {
+      "filename" : "58_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "29x29"
+    },
+    {
+      "filename" : "87_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "29x29"
+    },
+    {
+      "filename" : "76_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "38x38"
+    },
+    {
+      "filename" : "114_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "38x38"
+    },
+    {
+      "filename" : "80_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "40x40"
+    },
+    {
+      "filename" : "120_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "40x40"
+    },
+    {
+      "filename" : "120_1_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "60x60"
+    },
+    {
+      "filename" : "180_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "60x60"
+    },
+    {
+      "filename" : "128_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "64x64"
+    },
+    {
+      "filename" : "192_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "64x64"
+    },
+    {
+      "filename" : "136_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "68x68"
+    },
+    {
+      "filename" : "152_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "76x76"
+    },
+    {
+      "filename" : "167_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "83.5x83.5"
+    },
+    {
+      "filename" : "1024_light.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "40_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "20x20"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "60_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "20x20"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "58_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "29x29"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "87_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "29x29"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "76_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "38x38"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "114_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "38x38"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "80_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "40x40"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "120_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "40x40"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "120_1_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "60x60"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "180_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "60x60"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "128_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "64x64"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "192_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "64x64"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "136_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "68x68"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "152_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "76x76"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "167_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "83.5x83.5"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "1024_dark.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "40_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "20x20"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "60_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "20x20"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "58_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "29x29"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "87_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "29x29"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "76_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "38x38"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "114_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "38x38"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "80_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "40x40"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "120_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "40x40"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "120_1_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "60x60"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "180_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "60x60"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "128_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "64x64"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "192_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "3x",
+      "size" : "64x64"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "136_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "68x68"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "152_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "76x76"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "167_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "2x",
+      "size" : "83.5x83.5"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "1024_tinted.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "scale" : "1x",
+      "size" : "1024x1024"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

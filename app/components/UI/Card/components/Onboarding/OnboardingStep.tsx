@@ -1,0 +1,161 @@
+import React from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useTailwind } from '@metamask/design-system-twrnc-preset';
+import {
+  Box,
+  HeaderStandard,
+  Text,
+  TextVariant,
+} from '@metamask/design-system-react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  useCardHeaderHandlers,
+  type CardHeaderMode,
+} from '../../hooks/useCardHeaderHandlers';
+
+interface OnboardingStepProps {
+  title: string;
+  description?: string;
+  formFields: React.ReactNode;
+  actions: React.ReactNode;
+  /**
+   * When true, keeps the action button visible above the keyboard.
+   * Use for screens with few fields (e.g., phone number, email confirmation).
+   * @default false
+   */
+  stickyActions?: boolean;
+  /**
+   * Controls the in-screen header rendered via HeaderStandard.
+   * Navigator headers are hidden; onboarding screens own their header chrome.
+   */
+  headerMode?: CardHeaderMode;
+  /**
+   * Optional override for the back header action when `headerMode` is `"back"`.
+   * Use for multi-step screens that share one route (back should change local
+   * step state instead of calling `navigation.goBack()`).
+   */
+  onBackPress?: () => void;
+}
+
+const OnboardingStep = ({
+  title,
+  description,
+  formFields,
+  actions,
+  stickyActions = false,
+  headerMode = 'none',
+  onBackPress,
+}: OnboardingStepProps) => {
+  const tw = useTailwind();
+  const headerHandlers = useCardHeaderHandlers(headerMode);
+  const resolvedHeaderHandlers =
+    headerMode === 'back' && onBackPress
+      ? { ...headerHandlers, onBack: onBackPress }
+      : headerHandlers;
+
+  const renderHeader = () => {
+    if (headerMode === 'none') {
+      return null;
+    }
+
+    return (
+      <HeaderStandard
+        includesTopInset
+        twClassName="bg-background-default"
+        {...resolvedHeaderHandlers}
+      />
+    );
+  };
+
+  const renderContent = () => (
+    <>
+      {/* Title and Description - prevent from shrinking when keyboard opens */}
+      <Box twClassName="gap-4 my-2 shrink-0">
+        {/* Title */}
+        <Text
+          variant={TextVariant.HeadingLg}
+          testID="onboarding-step-title"
+          twClassName="text-default"
+        >
+          {title}
+        </Text>
+
+        {description ? (
+          <Text
+            variant={TextVariant.BodyMd}
+            testID="onboarding-step-description"
+            twClassName="text-text-alternative"
+          >
+            {description}
+          </Text>
+        ) : null}
+      </Box>
+      {/* Form */}
+      <Box testID="onboarding-step-form" twClassName="gap-4 flex-1">
+        {formFields}
+      </Box>
+    </>
+  );
+
+  if (stickyActions) {
+    return (
+      <SafeAreaView
+        style={tw.style('flex-1 bg-background-default')}
+        edges={['bottom']}
+      >
+        {renderHeader()}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={tw.style('flex-1')}
+        >
+          <ScrollView
+            contentContainerStyle={tw.style('flex-grow px-4')}
+            showsVerticalScrollIndicator={false}
+            alwaysBounceVertical={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
+          >
+            <Box twClassName="flex-1 items-stretch gap-4 mb-6">
+              {renderContent()}
+            </Box>
+          </ScrollView>
+
+          {/* Actions - Fixed at bottom, visible above keyboard */}
+          <Box testID="onboarding-step-actions" twClassName="px-4 pb-6">
+            {actions}
+          </Box>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView
+      style={tw.style('flex-1 bg-background-default')}
+      edges={['bottom']}
+    >
+      {renderHeader()}
+      <KeyboardAwareScrollView
+        contentContainerStyle={tw.style('flex-grow px-4')}
+        showsVerticalScrollIndicator={false}
+        alwaysBounceVertical={false}
+        enableOnAndroid
+        enableAutomaticScroll
+        extraScrollHeight={Platform.OS === 'android' ? 120 : 20}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Box twClassName="flex-1 items-stretch gap-4 mb-6">
+          {renderContent()}
+
+          {/* Actions - Inside scroll view */}
+          <Box testID="onboarding-step-actions" twClassName="mt-2">
+            {actions}
+          </Box>
+        </Box>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default OnboardingStep;
