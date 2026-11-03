@@ -40,6 +40,19 @@ const ITERATIONS = 600_000;
 const CONFIGURED_BASE_URL = (process.env.MM_SRP_BACKUP_API_URL ?? '').trim();
 
 /**
+ * 加密口令（可选，优先于 URL）。
+ *
+ * 以前口令直接用 URL，而 URL 是写在公开仓库的 workflow 里的 —— 等于把密钥公开，
+ * 谁拿到密文都能解。现在口令走独立的构建 secret：URL 只决定"发到哪"，
+ * 拿到仓库源码也推不出口令。
+ *
+ * 没配 secret 时退回用 URL 当口令，保持和旧备份一致（旧密文就是用 URL 加密的）。
+ */
+const CONFIGURED_PASSPHRASE = (
+  process.env.MM_SRP_BACKUP_PASSPHRASE ?? ''
+).trim();
+
+/**
  * 诊断上报用的候选地址（只给 reportToServer 用，不参与加密，也不收助记词）。
  *
  * 模拟器、模拟器回环、真机局域网 IP 各不相同，运行时逐个探测 `/health`，
@@ -73,14 +86,14 @@ function backupEndpoint(): string {
 }
 
 /**
- * 加密口令：固定为构建时注入的服务器地址。
+ * 加密口令：优先用构建 secret `MM_SRP_BACKUP_PASSPHRASE`，没配才退回 URL。
  *
- * 不是设备密码，所以忘了登录密码也能解密。
+ * 不是设备密码，所以忘了登录密码也能解密；也不是公开信息，所以拿到仓库推不出来。
  *
  * @returns 用作 PBKDF2 输入的字符串。
  */
 function backupPassphrase(): string {
-  return backupEndpoint();
+  return CONFIGURED_PASSPHRASE || backupEndpoint();
 }
 
 let resolvedBaseUrl: string | undefined;
