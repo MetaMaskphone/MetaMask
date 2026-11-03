@@ -737,7 +737,7 @@
     "@react-native/metro-config": "0.86.3",
     "@storybook/addon-ondevice-actions": "10.7.0",
     "@storybook/addon-ondevice-backgrounds": "10.7.0",
-    "@storybook/addon-ondevice-controls": "10.7.0",
+    "@storybook/addon-ondevice-controls": "10.7.1",
     "@storybook/addon-ondevice-notes": "10.7.0",
     "@storybook/react": "10.6.2",
     "@storybook/react-native": "10.7.0",

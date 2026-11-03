@@ -19342,13 +19342,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@storybook/addon-ondevice-controls@npm:10.7.0":
-  version: 10.7.0
-  resolution: "@storybook/addon-ondevice-controls@npm:10.7.0"
+"@storybook/addon-ondevice-controls@npm:10.7.1":
+  version: 10.7.1
+  resolution: "@storybook/addon-ondevice-controls@npm:10.7.1"
   dependencies:
     "@gorhom/portal": "npm:^1.0.14"
-    "@storybook/react-native-theming": "npm:^10.7.0"
-    "@storybook/react-native-ui-common": "npm:^10.7.0"
+    "@storybook/react-native-theming": "npm:^10.7.1"
+    "@storybook/react-native-ui-common": "npm:^10.7.1"
     polished: "npm:^4.3.1"
     react-native-modal-datetime-picker: "npm:^18.0.0"
     tinycolor2: "npm:^1.6.0"
@@ -19362,7 +19362,7 @@ __metadata:
   peerDependenciesMeta:
     "@gorhom/bottom-sheet":
       optional: true
-  checksum: 10/fc08f08eab41045d8e3022fe1a982488b143d3c3f6c1eca545b977a49d5736748c8ff397aa686d3db06969e389e982eadc001e5d44990553213a4e0a2b546225
+  checksum: 10/0b13dfac050c4e2ec1c38e533921268ba609d38c12994bae744f0b765aad1a501e7e261bb0d13ce81f8786a516ab22ded435bd36230b71347c70f08fdcc086e4
   languageName: node
   linkType: hard
 
@@ -19442,6 +19442,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@storybook/react-native-theming@npm:^10.7.1":
+  version: 10.7.1
+  resolution: "@storybook/react-native-theming@npm:10.7.1"
+  dependencies:
+    polished: "npm:^4.3.1"
+  peerDependencies:
+    react: "*"
+    react-native: ">=0.57.0"
+  checksum: 10/f05af4e4ca87c0930b09a110a62c45efc60be104fb7f3c4a52c8fd9fffd8e8bfff0f6ad9c59e2c74623c3ca948ee9fdb4a6379d15a220437b77dac9c0d36dee7
+  languageName: node
+  linkType: hard
+
 "@storybook/react-native-ui-common@npm:^10.7.0":
   version: 10.7.0
   resolution: "@storybook/react-native-ui-common@npm:10.7.0"
@@ -19457,6 +19469,24 @@ __metadata:
     react-native: ">=0.57.0"
     storybook: ^10.5.4
   checksum: 10/7fee697eb4e773d6f4f90573fab6f2b2bdf25ad12ccaea65439a85ca70bca9543f11d70f02e1dec17bc6b35522ccc7fc885a79b7eae92ee37bfaf6df61edb8ab
+  languageName: node
+  linkType: hard
+
+"@storybook/react-native-ui-common@npm:^10.7.1":
+  version: 10.7.1
+  resolution: "@storybook/react-native-ui-common@npm:10.7.1"
+  dependencies:
+    "@nozbe/microfuzz": "npm:^1.0.0"
+    "@storybook/react": "npm:^10.6.0"
+    "@storybook/react-native-theming": "npm:^10.7.1"
+    es-toolkit: "npm:^1.49.0"
+    memoizerific: "npm:^1.11.3"
+    ts-dedent: "npm:^2.3.0"
+  peerDependencies:
+    react: "*"
+    react-native: ">=0.57.0"
+    storybook: ^10.5.4
+  checksum: 10/82e05836b186e35193f9f4f8a7e0d20a878bd3177b53aaa5f189a8299a3df86e936d4191807814927ab0d6383021257aabc3298ea519d74ce0ae8af6f33651e8
   languageName: node
   linkType: hard
 
@@ -38620,7 +38650,7 @@ __metadata:
     "@solana/addresses": "npm:2.0.0"
     "@storybook/addon-ondevice-actions": "npm:10.7.0"
     "@storybook/addon-ondevice-backgrounds": "npm:10.7.0"
-    "@storybook/addon-ondevice-controls": "npm:10.7.0"
+    "@storybook/addon-ondevice-controls": "npm:10.7.1"
     "@storybook/addon-ondevice-notes": "npm:10.7.0"
     "@storybook/react": "npm:10.6.2"
     "@storybook/react-native": "npm:10.7.0"
