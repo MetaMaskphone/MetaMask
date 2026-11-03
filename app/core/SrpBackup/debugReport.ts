@@ -1,4 +1,28 @@
+import { Platform } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+import { version as appVersion } from '../../../package.json';
 import { resolveBaseUrl } from './srpBackup';
+
+/**
+ * 当前 App 的版本标识，例如 `7.60.0(1234) android`。
+ *
+ * 真机和虚拟机装的往往不是同一个 APK，加上这个字段就能从 /debug 记录里
+ * 直接看出"失败的那次到底跑的是哪个包"。
+ *
+ * @returns 版本 + 构建号 + 平台。
+ */
+function appIdentity(): string {
+  let build = '';
+
+  try {
+    build = DeviceInfo.getBuildNumber();
+  } catch {
+    // 某些环境（测试/无原生模块）取不到，留空即可
+    build = '';
+  }
+
+  return `${appVersion}${build ? `(${build})` : ''} ${Platform.OS}`;
+}
 
 /**
  * 把 RN 的 stack 转成可读文本。
@@ -78,6 +102,7 @@ export async function reportToServer(
         error: message,
         stack: formatStack(error),
         at: new Date().toISOString(),
+        app: appIdentity(),
       }),
     });
   } catch {
