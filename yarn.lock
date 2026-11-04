@@ -21428,12 +21428,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:^19.2.0":
+"@types/react@npm:*":
   version: 19.2.17
   resolution: "@types/react@npm:19.2.17"
   dependencies:
     csstype: "npm:^3.2.2"
   checksum: 10/8debb092bd0bb9c99176a31824c7587c27c775a6526b60060e7b9e8dc2af53aee2ffadc7a1e3845953792437db5699d34a9054e198c9d4e54a74728ff47c6725
+  languageName: node
+  linkType: hard
+
+"@types/react@npm:^19.3.0":
+  version: 19.3.0
+  resolution: "@types/react@npm:19.3.0"
+  dependencies:
+    csstype: "npm:^3.2.2"
+  checksum: 10/2f4589222fd9c512e1ef78e65f334ade8777400add8ec0803fcc3a044761679b7984ba8410a890af24255383c3251a568bb692b60acfa22397ba0a64b2e032bf
   languageName: node
   linkType: hard
 
@@ -38650,7 +38659,7 @@ __metadata:
     "@types/prompts": "npm:^2.4.9"
     "@types/prop-types": "npm:^15.7.15"
     "@types/qs": "npm:^6.9.15"
-    "@types/react": "npm:^19.2.0"
+    "@types/react": "npm:^19.3.0"
     "@types/react-native-background-timer": "npm:^2.0.0"
     "@types/react-native-elevated-view": "npm:^0.0.4"
     "@types/react-native-material-textfield": "npm:^0.16.5"
@@ -38802,7 +38811,7 @@ __metadata:
     qs: "npm:6.16.0"
     query-string: "npm:^6.12.1"
     randomfill: "npm:^1.0.4"
-    react: "npm:19.2.3"
+    react: "npm:19.3.1"
     react-compiler-runtime: "npm:^19.1.0-rc.2"
     react-dom: "npm:19.2.3"
     react-native: "patch:react-native@npm%3A0.86.3#~/.yarn/patches/react-native-npm-0.86.3-2292697f2f.patch"
@@ -45781,10 +45790,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:19.2.3":
-  version: 19.2.3
-  resolution: "react@npm:19.2.3"
-  checksum: 10/d16b7f35c0d35a56f63d9d1693819762e4abc479c57dd6310298920bed3820fcec7e17a99d44983416d8f5049143ea45b8005d3ab8324bae8973224400502b08
+"react@npm:19.3.1":
+  version: 19.3.1
+  resolution: "react@npm:19.3.1"
+  checksum: 10/8305f553520125f1b202998d403bf5b69de732d3e9d6ac3d42c53eeabc1c612a4f2ee68f5f9d17277258fc880252b0d5073750317a5c8801c83d9a4382e4b322
   languageName: node
   linkType: hard
 
