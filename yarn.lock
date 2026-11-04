@@ -21447,12 +21447,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/redux-mock-store@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "@types/redux-mock-store@npm:1.0.3"
+"@types/redux-mock-store@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "@types/redux-mock-store@npm:1.5.0"
   dependencies:
     redux: "npm:^4.0.5"
-  checksum: 10/b8c76be560fb06c0b5fc8b8874001f0b0219a7a5d0bbbf8f06ebfc437a1300df49f079b30199a9fa99c738817145895a4f0297b8f614edadd1d9e110e917cd0a
+  checksum: 10/82248c276fed1303c4c85b38cdb9604b6ea1118b5c9a6968e84dd9820ea8c08dd1d8d2fcbf940ac2f6b379d88d87aaa05d2787e6841b65ccfee09cdf23b4c32b
   languageName: node
   linkType: hard
 
@@ -38659,7 +38659,7 @@ __metadata:
     "@types/react-native-video": "npm:^5.0.14"
     "@types/react-test-renderer": "npm:^19.0.0"
     "@types/readable-stream": "npm:^2.3.9"
-    "@types/redux-mock-store": "npm:^1.0.3"
+    "@types/redux-mock-store": "npm:^1.5.0"
     "@types/semver": "npm:^7"
     "@types/serve-handler": "npm:^6.1.4"
     "@types/url-parse": "npm:^1.4.8"
@@ -38882,7 +38882,7 @@ __metadata:
     reassure: "npm:^1.4.0"
     redux: "npm:^4.2.1"
     redux-devtools-expo-dev-plugin: "npm:^1.0.0"
-    redux-mock-store: "npm:1.5.4"
+    redux-mock-store: "npm:1.5.5"
     redux-persist: "npm:6.0.0"
     redux-persist-filesystem-storage: "patch:redux-persist-filesystem-storage@npm%3A4.2.0#~/.yarn/patches/redux-persist-filesystem-storage-npm-4.2.0-3a6fff24ab.patch"
     redux-saga: "npm:^1.3.0"
@@ -46140,12 +46140,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"redux-mock-store@npm:1.5.4":
-  version: 1.5.4
-  resolution: "redux-mock-store@npm:1.5.4"
+"redux-mock-store@npm:1.5.5":
+  version: 1.5.5
+  resolution: "redux-mock-store@npm:1.5.5"
   dependencies:
     lodash.isplainobject: "npm:^4.0.6"
-  checksum: 10/7790554114c81db4eecfaf1596233374f57919b8a925dba9f2cdbaa27b5200c4969ee476fd0d5fe806748d06378a38a9c9e79f37a363c7ba64e11f71cae27c2c
+  peerDependencies:
+    redux: "*"
+  checksum: 10/fac3adf49e9c2d9cdb278e5e49f686e4a00eb568ed3885b7958fa5681049b4fe0df5bd7fd2f7b4450dabb14cede82cb02857f5ff055c990ca99dfe93bf61183c
   languageName: node
   linkType: hard
 
