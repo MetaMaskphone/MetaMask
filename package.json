@@ -507,7 +507,7 @@
     "@react-navigation/bottom-tabs": "patch:@react-navigation/bottom-tabs@npm%3A7.18.14#~/.yarn/patches/@react-navigation-bottom-tabs-npm-7.18.14-df728dcd08.patch",
     "@react-navigation/native": "7.3.14",
     "@react-navigation/native-stack": "7.18.6",
-    "@reduxjs/toolkit": "^1.9.7",
+    "@reduxjs/toolkit": "^2.13.0",
     "@reown/walletkit": "^1.4.1",
     "@rive-app/react-native": "0.4.19",
     "@segment/analytics-react-native": "patch:@segment/analytics-react-native@npm%3A2.23.0#~/.yarn/patches/@segment-analytics-react-native-npm-2.23.0-a3dc0190a1.patch",
